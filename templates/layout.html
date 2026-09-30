@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="{{ html_lang }}" class="govuk-template">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page_title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#1d70b8">
+    <link rel="stylesheet" href="{{ stylesheet_href }}">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+    <link rel="icon" sizes="48x48" href="/assets/images/favicon.ico">
+    <link rel="icon" sizes="any" href="/assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="mask-icon" href="/assets/images/govuk-icon-mask.svg" color="#1d70b8">
+    <link rel="apple-touch-icon" href="/assets/images/govuk-icon-180.png">
+    <link rel="manifest" href="/assets/manifest.json">
+  </head>
+  <body class="govuk-template__body">
+    <script>{{ js_enabled_snippet|safe }}</script>
+    {{ skip_link|safe }}
+    {{ cookie_banner|safe }}
+    <header class="govuk-template__header">
+      {{ header|safe }}
+      {{ service_nav|safe }}
+    </header>
+    <div class="govuk-width-container">
+      {{ phase_banner|safe }}
+      {{ before_content|safe }}
+      <main class="govuk-main-wrapper" id="main-content">
+        {{ demo_banner|safe }}
+        {{ content|safe }}
+      </main>
+    </div>
+    <footer class="govuk-template__footer">
+      {{ feedback|safe }}
+      {{ footer|safe }}
+    </footer>
+    <script type="module" src="{{ app_module_href }}"></script>
+  </body>
+</html>
