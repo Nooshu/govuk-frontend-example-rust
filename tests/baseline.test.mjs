@@ -274,6 +274,7 @@ describe('response headers', () => {
     assert.equal(headers['Cross-Origin-Opener-Policy'], 'same-origin');
     assert.equal(headers['Cross-Origin-Embedder-Policy'], 'require-corp');
     assert.equal(headers['Cross-Origin-Resource-Policy'], 'same-origin');
+    assert.equal(headers['X-Robots-Tag'], 'noindex, nofollow, noarchive, nosnippet, noimageindex');
     assert.equal(headers['Strict-Transport-Security'], 'max-age=63072000; includeSubDomains');
     assert.equal(headers.Vary, 'Accept-Encoding');
     assert.equal(remove.includes('X-Powered-By'), true);
