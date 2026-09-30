@@ -6,7 +6,7 @@ Official fixture guidance: [https://frontend.design-system.service.gov.uk/testin
 
 Related docs: [govuk-components.md](govuk-components.md), [testing-components.md](testing-components.md), [upgrading-govuk-frontend.md](upgrading-govuk-frontend.md), [preview-server.md](preview-server.md).
 
-**Stack note:** Structure the _wrapper_ using the **chosen language’s best practices** ([tech-stack.md](tech-stack.md)). Prefer calling **GOV.UK Frontend Nunjucks macros** for component HTML rather than copy-pasting HTML from each release. Official `fixtures.json` enables extensive **100% parity** testing of backend output.
+**Stack note:** Structure the library using **Rust** best practices ([tech-stack.md](tech-stack.md)). Implement **native Rust renderers** that track GOV.UK Frontend macros/`template.njk` rather than copy-pasting HTML from each release. Official `fixtures.json` enables extensive **100% parity** testing of Rust output.
 
 ## Goals (non-negotiable)
 

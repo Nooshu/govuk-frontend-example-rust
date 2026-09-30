@@ -2,50 +2,44 @@
 
 ## Source of truth
 
-[GOV.UK Frontend](https://frontend.design-system.service.gov.uk/) **Nunjucks** macros and fixtures (Node package `govuk-frontend`). This repo re-implements the HTML contract in the **chosen wrapper language’s** idiomatic component / templating model so product pages never hand-write component markup. See [tech-stack.md](tech-stack.md).
+[GOV.UK Frontend](https://frontend.design-system.service.gov.uk/) **Nunjucks** macros and fixtures (Node package `govuk-frontend`). This repo re-implements the HTML contract in **Rust** so product pages never hand-write component markup. See [tech-stack.md](tech-stack.md).
 
-## Architecture (intended)
+## Architecture
 
 ```text
-Page / pattern
-  → library API (one entry per component)
-    → options model (aligned with Nunjucks macro options)
-      → renderer → exact HTML string
+Page / pattern (Askama + Axum)
+  → govuk::render / must_render
+    → Params / Value (aligned with Nunjucks macro options)
+      → Rust renderer → exact HTML string
         → Frontend CSS/JS in the page shell
 ```
 
-Supporting pieces (names/paths idiomatic for the wrapper language):
+Supporting pieces:
 
-- **Shared HTML helpers** — Nunjucks-compatible escape + attribute serialization.
-- **Fixture loader** — cached `fixtures.json` for Previews / Fixtures.
-- **Options mapper** — fixture `options` → model (including edge cases).
-- **Layout chrome** — shared skip link / header / footer / service nav / pattern back link.
-- **Nunjucks suite (Node)** — proves stored fixtures still match Frontend macros.
+- **Shared HTML helpers** — Nunjucks-compatible escape + attribute serialization (`src/govuk/`).
+- **Fixture loader** — `fixtures.json` via Serde for catalogue previews and parity tests.
+- **Options mapper** — fixture `options` → `Params` (including edge cases).
+- **Layout chrome** — Askama `templates/layout.html` with skip link / header / footer / service nav.
+- **Catalogue** — `/components` (links only) and `/components/:name` (fixture preview + real parity banner).
 
-See [layout-chrome.md](layout-chrome.md), [creating-components.md](creating-components.md), [testing-components.md](testing-components.md).
+See [layout-chrome.md](layout-chrome.md), [creating-components.md](creating-components.md), [testing-components.md](testing-components.md), [preview-server.md](preview-server.md).
 
 ## Components vs patterns
 
-|                | Components                  | Patterns               |
-| -------------- | --------------------------- | ---------------------- |
-| Design System  | `/components/`              | `/patterns/` and Pages |
-| Implementation | Library wrappers + fixtures | Composed pages         |
-| Parity suite   | Required                    | Not applicable         |
+|                | Components                | Patterns               |
+| -------------- | ------------------------- | ---------------------- |
+| Design System  | `/components/`            | `/patterns/` and Pages |
+| Implementation | Rust renderers + fixtures | Composed pages         |
+| Parity suite   | Required                  | Not applicable         |
 
-## Expected component set
+## Component set
 
-Ship wrappers for Design System components that Frontend provides fixtures for, including (non-exhaustive): accordion, back link, breadcrumbs, button, character count, checkboxes, cookie banner, date input, details, error message, error summary, exit this page, fieldset, file upload, generic header, footer, header, inset text, notification banner, pagination, panel, password input, phase banner, radios, select, service navigation, skip link, summary list, table, tabs, tag, task list, text input, textarea, warning text.
+This example ships Rust renderers for every fixture-bearing Frontend component in the pinned release (39 components), including: accordion, back link, breadcrumbs, button, character count, checkboxes, cookie banner, date input, details, error message, error summary, exit this page, feedback, fieldset, file upload, generic header, footer, header, hint, input, inset text, label, language navigation, notification banner, pagination, panel, password input, phase banner, radios, select, service navigation, skip link, summary list, table, tabs, tag, task list, textarea, warning text.
 
-Per-component deep dives: add `docs/govuk-<kebab-name>.md` as each ships. Until then use the [Design System component pages](https://design-system.service.gov.uk/components/).
+Per-component deep dives: add `docs/govuk-<kebab-name>.md` as needed. Until then use the [Design System component pages](https://design-system.service.gov.uk/components/).
 
-## Previews
+## Preview contract
 
-Each component gets a Dev/Testing preview surface listing fixtures and rendering the selection with a parity banner. Index/home lists links only — **no live demos on the homepage**.
-
-## Do not
-
-- Custom CSS for Design System appearance.
-- Unofficial step-nav or invented `govuk-*` chrome.
-- Embed demos on the index.
-- Rebuild skip link / header / footer models per request when shared chrome helpers exist.
-- Force another ecosystem’s folder layout once a language is chosen — follow that language’s best practices.
+- Catalogue index: links + short descriptions only (no embedded demos).
+- Component page: back link, demo banner, **parity banner only when Rust ≡ fixture**, Design System link, dotted preview, fixture version list with Current badge.
+- Raw fixture route: Rust-rendered HTML fragment (same path as tests).

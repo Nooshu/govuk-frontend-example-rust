@@ -13,12 +13,12 @@ Performance cache rules live in [frontend-performance.md](frontend-performance.m
 
 ## Language lines
 
-Sync the whole `baseline/` directory with this repo. Do not fork a weaker header set in the language line.
+Sync the whole `baseline/` directory with this repo. Do not fork a weaker header set.
 
-| Stack                      | How to apply it                                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Node (TypeScript included) | `import { applyResponseHeaders } from './baseline/index.mjs'` on every response                                    |
-| Any other language         | Read `baseline/policy.json` and match `buildResponseHeaders`. Use the Node helper as the oracle when you add tests |
+| Stack                   | How to apply it                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Rust (this example)** | `src/baseline.rs` loads `baseline/policy.json`; `httpx::apply_policy_headers` on every HTML/asset response |
+| Node helper (oracle)    | `baseline/index.mjs` — used by Node tests; keep Rust headers aligned with it                               |
 
 ```sh
 node --input-type=module -e "import { buildResponseHeaders } from './baseline/index.mjs'; console.log(JSON.stringify(buildResponseHeaders({ kind: 'document', secureTransport: true }), null, 2))"
@@ -52,23 +52,24 @@ applyResponseHeaders(response, {
 
 ## Headers on HTML documents
 
-| Header                              | Value                                            |
-| ----------------------------------- | ------------------------------------------------ |
-| `Content-Type`                      | `text/html; charset=utf-8`                       |
-| `Content-Security-Policy`           | Built from `policy.json` (below)                 |
-| `Strict-Transport-Security`         | `max-age=63072000; includeSubDomains` on HTTPS   |
-| `X-Content-Type-Options`            | `nosniff`                                        |
-| `X-Frame-Options`                   | `DENY`                                           |
-| `Referrer-Policy`                   | `strict-origin-when-cross-origin`                |
-| `Permissions-Policy`                | Every feature in `permissionsPolicy` set to `()` |
-| `Cross-Origin-Opener-Policy`        | `same-origin`                                    |
-| `Cross-Origin-Embedder-Policy`      | `require-corp`                                   |
-| `Cross-Origin-Resource-Policy`      | `same-origin`                                    |
-| `X-Permitted-Cross-Domain-Policies` | `none`                                           |
-| `X-XSS-Protection`                  | `0`                                              |
-| `Vary`                              | `Accept-Encoding`                                |
+| Header                              | Value                                                                                    |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `Content-Type`                      | `text/html; charset=utf-8`                                                               |
+| `Content-Security-Policy`           | Built from `policy.json` (below)                                                         |
+| `Strict-Transport-Security`         | `max-age=63072000; includeSubDomains` on HTTPS                                           |
+| `X-Content-Type-Options`            | `nosniff`                                                                                |
+| `X-Frame-Options`                   | `DENY`                                                                                   |
+| `Referrer-Policy`                   | `strict-origin-when-cross-origin`                                                        |
+| `Permissions-Policy`                | Every feature in `permissionsPolicy` set to `()`                                         |
+| `Cross-Origin-Opener-Policy`        | `same-origin`                                                                            |
+| `Cross-Origin-Embedder-Policy`      | `require-corp`                                                                           |
+| `Cross-Origin-Resource-Policy`      | `same-origin`                                                                            |
+| `X-Permitted-Cross-Domain-Policies` | `none`                                                                                   |
+| `X-XSS-Protection`                  | `0`                                                                                      |
+| `X-Robots-Tag`                      | `noindex, nofollow, noarchive, nosnippet, noimageindex` (all responses — this is a demo) |
+| `Vary`                              | `Accept-Encoding`                                                                        |
 
-Asset and download responses still send `X-Content-Type-Options`, `Referrer-Policy`, `Cross-Origin-Resource-Policy`, `X-Permitted-Cross-Domain-Policies`, `X-XSS-Protection`, and HSTS on HTTPS. They do not send CSP, `Permissions-Policy`, COOP, or COEP — those apply to documents, and repeating them on every file wastes bytes.
+Asset and download responses still send `X-Content-Type-Options`, `Referrer-Policy`, `Cross-Origin-Resource-Policy`, `X-Permitted-Cross-Domain-Policies`, `X-XSS-Protection`, `X-Robots-Tag`, and HSTS on HTTPS. They do not send CSP, `Permissions-Policy`, COOP, or COEP — those apply to documents, and repeating them on every file wastes bytes.
 
 `Cross-Origin-Resource-Policy: same-origin` is stricter than the OWASP cheat sheet’s `same-site` example. This template self-hosts Frontend assets and does not share them with sibling origins. Pass `crossOriginResourcePolicy: 'same-site'` only when a sibling origin must embed those responses.
 

@@ -5,35 +5,36 @@ Thanks for helping maintain this **GDS-compliant frontend** template. This guide
 ## Before you start
 
 1. Read [`docs/project-purpose.md`](docs/project-purpose.md) and [`docs/onboarding.md`](docs/onboarding.md).
-2. Confirm the wrapper language status in [`docs/tech-stack.md`](docs/tech-stack.md).
+2. Confirm the stack in [`docs/tech-stack.md`](docs/tech-stack.md) (**Rust** + Axum + Askama).
 3. Prefer official guidance listed in [`docs/guidance-sources.md`](docs/guidance-sources.md).
 4. Priorities: frontend web performance → frontend security → reduced maintenance → accessibility → inclusive design.
 
 ## Non-negotiables (short)
 
 - GOV.UK Frontend only for UI — **no** React/Vue/Angular/Svelte (etc.).
-- Prefer **Nunjucks macros** over copy-pasted HTML from releases.
-- Official fixtures for **100% HTML parity** of **backend** output vs every fixture `html`; never edit fixture `html` to pass tests. Nunjucks-only checks are not enough.
+- Prefer **native Rust renderers** that track Frontend macros over copy-pasted HTML from releases.
+- Official fixtures for **100% HTML parity** of **Rust** output vs every fixture `html`; never edit fixture `html` to pass tests.
 - **100%** code coverage (functions, branches, statements) when application code exists.
 - Before upgrading Frontend, read https://github.com/alphagov/govuk-frontend/releases/latest.
 - Document every change for **humans and agents** ([docs/documentation-structure.md](docs/documentation-structure.md)).
-- Follow the **latest** best practices for the language in [docs/tech-stack.md](docs/tech-stack.md).
+- Follow the **latest** Rust best practices in [docs/tech-stack.md](docs/tech-stack.md).
 
 Full list: [`AGENTS.md`](AGENTS.md).
 
-## Consistency tooling (today)
-
-While the wrapper language is TBD, Node tooling keeps docs and the shared performance/security baseline consistent:
+## Consistency tooling
 
 ```sh
-npm install
-npm run build:styles # Sass → dist/stylesheets/application.css
-npm test             # baseline/ + styles pipeline — 100% lines, branches, functions
-npm run verify:docs  # format:check + lint:md
-npm run verify       # verify:docs + build:styles + test
+npm ci
+npm run build:styles
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all
+npm test             # Node baseline + Sass + cargo fmt/clippy/test
+npm run verify       # docs + styles + tests
+npm start            # build styles then cargo run
 ```
 
-When the wrapper language is chosen, add its format/lint/test/coverage commands to [`docs/tech-stack.md`](docs/tech-stack.md) and wire them into CI.
+Stack details: [`docs/tech-stack.md`](docs/tech-stack.md). Example journey: [`docs/example-service.md`](docs/example-service.md).
 
 ### Dotfiles (do not bypass)
 
