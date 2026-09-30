@@ -2,7 +2,7 @@
 
 use crate::govuk::{must_render, params, v_bool, v_obj, v_safe, v_str, Value};
 use crate::pages::{html_escape, render_page, Page};
-use crate::service::{validate_cookie_choice, LICENCE_LENGTHS};
+use crate::service::{validate_cookie_choice, LICENCE_FEES};
 use crate::web::{html_response, redirect_with_session, session_id_from, AppState};
 use axum::body::Body;
 use axum::extract::{Query, State};
@@ -71,7 +71,7 @@ pub async fn help(State(state): State<AppState>, headers: HeaderMap) -> Response
                             v_obj(params(&[(
                                 "text",
                                 v_str(
-                                    "You can apply if you are 13 or over and you will fish with a rod in England or Wales.",
+                                    "You can apply if you are 13 or over and you will fish with a rod in England, Wales or Scotland.",
                                 ),
                             )])),
                         ),
@@ -120,7 +120,7 @@ pub async fn help(State(state): State<AppState>, headers: HeaderMap) -> Response
 }
 
 pub async fn fees(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
-    let rows: Vec<Value> = LICENCE_LENGTHS
+    let rows: Vec<Value> = LICENCE_FEES
         .iter()
         .map(|o| {
             Value::Array(vec![
@@ -177,7 +177,7 @@ pub async fn guidance(State(state): State<AppState>, headers: HeaderMap) -> Resp
                             v_obj(params(&[(
                                 "html",
                                 v_safe(
-                                    r#"<h2 class="govuk-heading-l">Before you apply</h2><p class="govuk-body">You need your name, date of birth, email address, and home address.</p>"#,
+                                    r#"<h2 class="govuk-heading-l">Before you apply</h2><p class="govuk-body">You need how long you need the licence, your name, date of birth, the country where you will fish, and your email address.</p>"#,
                                 ),
                             )])),
                         ),

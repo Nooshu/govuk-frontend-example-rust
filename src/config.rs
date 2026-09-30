@@ -5,7 +5,7 @@ use std::env;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
-pub const SERVICE_NAME: &str = "Apply for a rod fishing licence";
+pub const SERVICE_NAME: &str = "Apply for a fishing rod licence";
 pub const SERVICE_NAME_CY: &str = "Gwneud cais am drwydded bysgota";
 pub const DEFAULT_PORT: u16 = 3000;
 

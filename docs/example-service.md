@@ -1,6 +1,6 @@
 # Example service
 
-**Apply for a rod fishing licence** is the reference GOV.UK service in this repository. It is an example. It does not take payment, send email, or issue a licence.
+**Apply for a fishing rod licence** is the reference GOV.UK service in this repository. It is an example. It does not take payment, send email, or issue a licence.
 
 Every HTML page shows an **Important** notification banner (“This is a live demo. It is not a real government service.”), styled yellow via `.app-demo-banner` so it stands out from the blue header/footer, and a phase banner that repeats that it is a demonstration.
 
@@ -30,19 +30,18 @@ Public demo hosting: [deploying-on-render.md](deploying-on-render.md).
 The journey is one service, from the start page through to confirmation.
 
 1. Start at `/` (English) or `/cy` (Welsh start page only). Choose **Start now**.
-2. The task list at `/task-list` links to each question.
-3. Answer the questions in order: name, date of birth, email, contact preference, where you will fish, licence length, start month, address, evidence (optional), additional details (optional), and password.
-4. Check your answers at `/check-answers`. Change links return to a question and then come back.
-5. Submit. The confirmation page at `/confirmation` shows a reference. The password is not shown.
+2. Answer the questions in order: licence length, full name, date of birth, where you will fish, and email.
+3. Check your answers at `/check-answers`. Change links return to a question and then come back.
+4. Accept and continue. The confirmation page at `/confirmation` shows an example reference.
 
-Invalid answers stay on the same question, with an error summary and the values you entered. You cannot open confirmation until the required questions are complete.
+Invalid answers stay on the same question, with an error summary and the values you entered. You cannot open confirmation until the questions are complete.
 
 ## Pages
 
 | Path                                 | What it shows                                                                                                                                   |
 | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/` and `/cy`                        | Start page. Welsh is the start page and chrome only; the rest of the journey is in English. When demos are on, links to the component catalogue |
-| `/task-list`                         | Task list, then the questions, check your answers, and confirmation                                                                             |
+| `/licence-length` through `/email`   | Question pages, then check your answers and confirmation                                                                                        |
 | `/fees`, `/help`, `/guidance`        | Fees table, help accordion, and guidance tabs                                                                                                   |
 | `/updates`, `/cookies`               | Service updates with pagination, and cookie settings                                                                                            |
 | `/accessibility`, `/about`           | Accessibility statement and what this example is                                                                                                |

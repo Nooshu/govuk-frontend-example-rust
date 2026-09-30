@@ -59,12 +59,13 @@ impl SessionStore {
 }
 
 pub fn reference_for(session_id: &str) -> String {
-    let prefix = if session_id.len() > 6 {
-        &session_id[..6]
+    let hex = if session_id.len() >= 8 {
+        &session_id[..8]
     } else {
         session_id
     };
-    format!("RL{}", prefix.to_uppercase())
+    let number = u64::from_str_radix(hex, 16).unwrap_or(0) % 100_000_000;
+    format!("FR{number:08}")
 }
 
 fn random_hex(size: usize) -> String {
@@ -84,6 +85,7 @@ mod tests {
         assert!(!data.csrf.is_empty());
         let (id2, _) = store.get_or_create(Some(&id));
         assert_eq!(id, id2);
-        assert!(reference_for(&id).starts_with("RL"));
+        assert!(reference_for(&id).starts_with("FR"));
+        assert_eq!(reference_for(&id).len(), 10);
     }
 }
