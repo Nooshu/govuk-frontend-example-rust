@@ -1,0 +1,23 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Step-by-step: docs/deploying-on-render.md
+#
+# Native Rust runtime includes Node/npm for the Frontend pin and Sass build.
+# Sessions are in-memory (fine for a public example; not multi-instance durable).
+
+services:
+  - type: web
+    name: govuk-frontend-example-rust
+    runtime: rust
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    buildCommand: ./scripts/render-build.sh
+    startCommand: ./target/release/govuk-frontend-example-rust
+    envVars:
+      # Render often sets NODE_ENV=production; force demos on for the public example.
+      # Set DEMOS_ENABLED=false (or remove this) if you want catalogue/previews off.
+      - key: DEMOS_ENABLED
+        value: "true"
+      - key: NODE_VERSION
+        value: "22"
