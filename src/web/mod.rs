@@ -32,13 +32,20 @@ pub fn router(state: AppState) -> Router {
         .route("/", get(journey::start_en))
         .route("/cy", get(journey::start_cy))
         .route("/new-application", get(journey::new_application))
-        .route("/task-list", get(journey::task_list))
-        .route("/name", get(journey::name_get).post(journey::name_post))
-        .route("/email", get(journey::email_get).post(journey::email_post))
         .route(
-            "/create-a-password",
-            get(journey::password_get).post(journey::password_post),
+            "/licence-length",
+            get(journey::licence_length_get).post(journey::licence_length_post),
         )
+        .route("/name", get(journey::name_get).post(journey::name_post))
+        .route(
+            "/date-of-birth",
+            get(journey::date_of_birth_get).post(journey::date_of_birth_post),
+        )
+        .route(
+            "/where-you-will-fish",
+            get(journey::country_get).post(journey::country_post),
+        )
+        .route("/email", get(journey::email_get).post(journey::email_post))
         .route(
             "/check-answers",
             get(journey::check_answers_get).post(journey::check_answers_post),
@@ -55,19 +62,6 @@ pub fn router(state: AppState) -> Router {
         .route("/guidance", get(static_pages::guidance))
         .route("/accessibility", get(static_pages::accessibility))
         .route("/updates", get(static_pages::updates));
-
-    for path in [
-        "/date-of-birth",
-        "/contact-preference",
-        "/where-you-will-fish",
-        "/licence-length",
-        "/start-month",
-        "/address",
-        "/evidence",
-        "/additional-details",
-    ] {
-        app = app.route(path, get(journey::generic_get).post(journey::generic_post));
-    }
 
     if state.config.demos_enabled {
         app = app

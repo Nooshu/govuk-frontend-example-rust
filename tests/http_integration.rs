@@ -86,8 +86,9 @@ async fn html_pages_are_noindex() {
 async fn start_page_renders() {
     let (status, body) = get("/").await;
     assert_eq!(status, 200);
-    assert!(body.contains("Apply for a rod fishing licence"));
+    assert!(body.contains("Apply for a fishing rod licence"));
     assert!(body.contains("Start now"));
+    assert!(body.contains("href=\"/licence-length\""));
     assert!(body.contains("govuk-template"));
 }
 
@@ -117,15 +118,17 @@ async fn button_preview_shows_parity_when_matching() {
 }
 
 #[tokio::test]
-async fn task_list_and_name_question() {
-    let (status, body) = get("/task-list").await;
+async fn licence_length_and_name_question() {
+    let (status, body) = get("/licence-length").await;
     assert_eq!(status, 200);
-    assert!(body.contains("What is your name?"));
+    assert!(body.contains("How long do you need the licence for?"));
+    assert!(body.contains("12 months"));
 
     let (status, body) = get("/name").await;
     assert_eq!(status, 200);
     assert!(body.contains("novalidate"));
-    assert!(body.contains("Save and continue"));
+    assert!(body.contains("What is your full name?"));
+    assert!(body.contains("Continue"));
 }
 
 #[tokio::test]

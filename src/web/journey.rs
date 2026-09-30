@@ -1,16 +1,53 @@
 //! Rod fishing licence journey handlers.
 
-use crate::govuk::{must_render, params, v_obj, v_str, Value};
+use crate::govuk::{must_render, params, v_bool, v_obj, v_str, Value};
 use crate::pages::{html_escape, render_page, Page};
-use crate::service::{self, FieldError, StepId};
-use crate::session::SessionData;
+use crate::service::{self, FieldError, StepId, COUNTRIES, LICENCE_LENGTHS};
+use crate::session::{reference_for, SessionData};
 use crate::web::{html_response, redirect_with_session, session_id_from, AppState};
 use axum::body::Body;
-use axum::extract::{OriginalUri, State};
+use axum::extract::{Query, State};
 use axum::http::{HeaderMap, Response};
 use axum::Form;
 use serde::Deserialize;
-use uuid::Uuid;
+
+#[derive(Deserialize, Default)]
+pub struct ReturnQuery {
+    #[serde(rename = "return")]
+    return_to: Option<String>,
+}
+
+fn return_to_check(return_to: Option<&str>) -> bool {
+    return_to == Some("check-answers")
+}
+
+fn back_for(step: StepId, to_check: bool) -> &'static str {
+    if to_check {
+        "/check-answers"
+    } else {
+        service::previous_step(step)
+            .map(|s| s.path)
+            .unwrap_or("/")
+    }
+}
+
+fn next_for(step: StepId, to_check: bool) -> &'static str {
+    if to_check {
+        "/check-answers"
+    } else {
+        service::next_step(step)
+            .map(|s| s.path)
+            .unwrap_or("/check-answers")
+    }
+}
+
+fn return_hidden(to_check: bool) -> &'static str {
+    if to_check {
+        r#"<input type="hidden" name="returnTo" value="check-answers">"#
+    } else {
+        ""
+    }
+}
 
 pub async fn start_en(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
     start(&state, &headers, false).await
@@ -31,7 +68,7 @@ async fn start(state: &AppState, headers: &HeaderMap, welsh: bool) -> Response<B
                 "text",
                 v_str(if welsh { "Dechrau nawr" } else { "Start now" }),
             ),
-            ("href", v_str("/task-list")),
+            ("href", v_str("/licence-length")),
             ("isStartButton", Value::Bool(true)),
         ]),
     );
@@ -54,8 +91,10 @@ async fn start(state: &AppState, headers: &HeaderMap, welsh: bool) -> Response<B
         &params(&[
             ("summaryText", v_str("What you will need")),
             (
-                "text",
-                v_str("Your name, date of birth, email address, and where you will fish."),
+                "html",
+                v_str(
+                    r#"<ul class="govuk-list govuk-list--bullet"><li>How long you need the licence</li><li>Your name</li><li>Your date of birth</li><li>The country where you will fish</li><li>Your email address</li></ul>"#,
+                ),
             ),
         ]),
     );
@@ -109,75 +148,151 @@ pub async fn new_application(State(state): State<AppState>, headers: HeaderMap) 
     redirect_with_session("/", &sid, state.assets.secure_transport)
 }
 
-pub async fn task_list(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
-    let (sid, data) = state
-        .sessions
-        .get_or_create(session_id_from(&headers).as_deref());
-    let items: Vec<Value> = service::steps()
-        .iter()
-        .map(|step| {
-            let status = if data.application.is_completed(step.id) {
-                v_obj(params(&[(
-                    "tag",
-                    v_obj(params(&[("text", v_str("Completed"))])),
-                )]))
-            } else {
-                v_obj(params(&[("text", v_str("Not started"))]))
-            };
-            v_obj(params(&[
-                ("title", v_obj(params(&[("text", v_str(step.heading))]))),
-                ("href", v_str(step.path)),
-                ("status", status),
-            ]))
-        })
-        .collect();
-    let list = must_render("task-list", &params(&[("items", Value::Array(items))]));
-    let content = format!(
-        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-        <h1 class="govuk-heading-xl">Apply for a rod fishing licence</h1>
-        {list}
-        <p class="govuk-body"><a class="govuk-link" href="/check-answers">Check your answers</a></p>
-        </div></div>"#
-    );
-    let html = render_page(Page {
-        title: "Task list",
-        content,
-        back_href: Some("/"),
-        breadcrumbs: false,
-        sensitive: true,
-        welsh: false,
-        show_feedback: false,
-        assets: &state.assets,
-        session: &data,
-        return_path: "/task-list",
-    });
-    html_response(&state, html, &sid, true)
-}
-
 #[derive(Deserialize)]
-pub struct NameForm {
-    #[serde(rename = "first-name")]
-    first_name: String,
-    #[serde(rename = "last-name")]
-    last_name: String,
+pub struct LicenceLengthForm {
+    #[serde(rename = "licence-length", default)]
+    licence_length: String,
+    #[serde(rename = "returnTo", default)]
+    return_to: Option<String>,
 }
 
-pub async fn name_get(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
+pub async fn licence_length_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReturnQuery>,
+) -> Response<Body> {
     let (sid, data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
-    let content = name_form(
-        &data.application.first_name,
-        &data.application.last_name,
-        &[],
-    );
+    let to_check = return_to_check(q.return_to.as_deref());
+    let content = licence_length_form(&data.application.licence_length, &[], to_check);
     page_question(
         &state,
         &sid,
         &data,
-        "What is your name?",
-        "/name",
-        "/task-list",
+        "How long do you need the licence for?",
+        if to_check {
+            "/licence-length?return=check-answers"
+        } else {
+            "/licence-length"
+        },
+        back_for(StepId::LicenceLength, to_check),
+        content,
+    )
+}
+
+pub async fn licence_length_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<LicenceLengthForm>,
+) -> Response<Body> {
+    let (sid, mut data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(form.return_to.as_deref());
+    let errors = service::validate_licence_length(&form.licence_length);
+    if errors.is_empty() {
+        data.application.licence_length = form.licence_length;
+        data.application.mark_completed(StepId::LicenceLength);
+        state.sessions.save(&sid, data);
+        redirect_with_session(
+            next_for(StepId::LicenceLength, to_check),
+            &sid,
+            state.assets.secure_transport,
+        )
+    } else {
+        let content = licence_length_form(&form.licence_length, &errors, to_check);
+        page_question(
+            &state,
+            &sid,
+            &data,
+            "How long do you need the licence for?",
+            if to_check {
+                "/licence-length?return=check-answers"
+            } else {
+                "/licence-length"
+            },
+            back_for(StepId::LicenceLength, to_check),
+            content,
+        )
+    }
+}
+
+fn licence_length_form(selected: &str, errors: &[FieldError], to_check: bool) -> String {
+    let summary = error_summary(errors);
+    let message = field_error(errors, "licence-length");
+    let items: Vec<Value> = LICENCE_LENGTHS
+        .iter()
+        .enumerate()
+        .map(|(index, option)| {
+            let mut fields = vec![
+                ("value", v_str(option.value)),
+                ("text", v_str(option.text)),
+                ("checked", Value::Bool(selected == option.value)),
+            ];
+            if index == 0 {
+                fields.push(("id", v_str("licence-length")));
+            }
+            v_obj(params(&fields))
+        })
+        .collect();
+    let mut radio_params = vec![
+        ("idPrefix", v_str("licence-length")),
+        ("name", v_str("licence-length")),
+        (
+            "fieldset",
+            v_obj(params(&[(
+                "legend",
+                v_obj(params(&[
+                    ("text", v_str("How long do you need the licence for?")),
+                    ("isPageHeading", Value::Bool(true)),
+                    ("classes", v_str("govuk-fieldset__legend--l")),
+                ])),
+            )])),
+        ),
+        ("items", Value::Array(items)),
+    ];
+    if let Some(text) = message {
+        radio_params.push(("errorMessage", v_obj(params(&[("text", v_str(text))]))));
+    }
+    let radios = must_render("radios", &params(&radio_params));
+    let button = must_render("button", &params(&[("text", v_str("Continue"))]));
+    let hidden = return_hidden(to_check);
+    format!(
+        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+        {summary}<form method="post" novalidate>{hidden}{radios}{button}</form></div></div>"#
+    )
+}
+
+#[derive(Deserialize)]
+pub struct NameForm {
+    #[serde(rename = "full-name", default)]
+    full_name: String,
+    #[serde(rename = "returnTo", default)]
+    return_to: Option<String>,
+}
+
+pub async fn name_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReturnQuery>,
+) -> Response<Body> {
+    let (sid, data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(q.return_to.as_deref());
+    let content = name_form(&data.application.full_name, &[], to_check);
+    page_question(
+        &state,
+        &sid,
+        &data,
+        "What is your full name?",
+        if to_check {
+            "/name?return=check-answers"
+        } else {
+            "/name"
+        },
+        back_for(StepId::Name, to_check),
         content,
     )
 }
@@ -190,85 +305,340 @@ pub async fn name_post(
     let (sid, mut data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
-    let errors = service::validate_name(&form.first_name, &form.last_name);
+    let to_check = return_to_check(form.return_to.as_deref());
+    let errors = service::validate_name(&form.full_name);
     if errors.is_empty() {
-        data.application.first_name = service::clean(&form.first_name);
-        data.application.last_name = service::clean(&form.last_name);
+        data.application.full_name = service::clean(&form.full_name);
         data.application.mark_completed(StepId::Name);
         state.sessions.save(&sid, data);
         redirect_with_session(
-            service::next_step(StepId::Name)
-                .map(|s| s.path)
-                .unwrap_or("/task-list"),
+            next_for(StepId::Name, to_check),
             &sid,
             state.assets.secure_transport,
         )
     } else {
-        let content = name_form(&form.first_name, &form.last_name, &errors);
+        let content = name_form(&form.full_name, &errors, to_check);
         page_question(
             &state,
             &sid,
             &data,
-            "What is your name?",
-            "/name",
-            "/task-list",
+            "What is your full name?",
+            if to_check {
+                "/name?return=check-answers"
+            } else {
+                "/name"
+            },
+            back_for(StepId::Name, to_check),
             content,
         )
     }
 }
 
-fn name_form(first: &str, last: &str, errors: &[FieldError]) -> String {
+fn name_form(full_name: &str, errors: &[FieldError], to_check: bool) -> String {
     let summary = error_summary(errors);
-    let first_err = field_error(errors, "first-name");
-    let last_err = field_error(errors, "last-name");
-    let first_input = must_render(
+    let input = must_render(
         "input",
         &params(&[
-            ("id", v_str("first-name")),
-            ("name", v_str("first-name")),
-            ("label", v_obj(params(&[("text", v_str("First name"))]))),
-            ("value", v_str(first)),
-            ("errorMessage", error_message_value(first_err)),
+            ("id", v_str("full-name")),
+            ("name", v_str("full-name")),
+            ("autocomplete", v_str("name")),
+            (
+                "label",
+                v_obj(params(&[
+                    ("text", v_str("What is your full name?")),
+                    ("classes", v_str("govuk-label--l")),
+                    ("isPageHeading", Value::Bool(true)),
+                ])),
+            ),
+            ("value", v_str(full_name)),
+            (
+                "errorMessage",
+                error_message_value(field_error(errors, "full-name")),
+            ),
         ]),
     );
-    let last_input = must_render(
-        "input",
-        &params(&[
-            ("id", v_str("last-name")),
-            ("name", v_str("last-name")),
-            ("label", v_obj(params(&[("text", v_str("Last name"))]))),
-            ("value", v_str(last)),
-            ("errorMessage", error_message_value(last_err)),
-        ]),
-    );
-    let button = must_render("button", &params(&[("text", v_str("Save and continue"))]));
+    let button = must_render("button", &params(&[("text", v_str("Continue"))]));
+    let hidden = return_hidden(to_check);
     format!(
         r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-        {summary}
-        <h1 class="govuk-heading-l">What is your name?</h1>
-        <form method="post" novalidate>
-        {first_input}{last_input}{button}
-        </form></div></div>"#
+        {summary}<form method="post" novalidate>{hidden}{input}{button}</form></div></div>"#
+    )
+}
+
+#[derive(Deserialize)]
+pub struct DateOfBirthForm {
+    #[serde(rename = "date-of-birth-day", default)]
+    day: String,
+    #[serde(rename = "date-of-birth-month", default)]
+    month: String,
+    #[serde(rename = "date-of-birth-year", default)]
+    year: String,
+    #[serde(rename = "returnTo", default)]
+    return_to: Option<String>,
+}
+
+pub async fn date_of_birth_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReturnQuery>,
+) -> Response<Body> {
+    let (sid, data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(q.return_to.as_deref());
+    let app = &data.application;
+    let content = date_of_birth_form(&app.day, &app.month, &app.year, &[], to_check);
+    page_question(
+        &state,
+        &sid,
+        &data,
+        "What is your date of birth?",
+        if to_check {
+            "/date-of-birth?return=check-answers"
+        } else {
+            "/date-of-birth"
+        },
+        back_for(StepId::DateOfBirth, to_check),
+        content,
+    )
+}
+
+pub async fn date_of_birth_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<DateOfBirthForm>,
+) -> Response<Body> {
+    let (sid, mut data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(form.return_to.as_deref());
+    let errors = service::validate_date_of_birth(&form.day, &form.month, &form.year);
+    if errors.is_empty() {
+        data.application.day = service::clean(&form.day);
+        data.application.month = service::clean(&form.month);
+        data.application.year = service::clean(&form.year);
+        data.application.mark_completed(StepId::DateOfBirth);
+        state.sessions.save(&sid, data);
+        redirect_with_session(
+            next_for(StepId::DateOfBirth, to_check),
+            &sid,
+            state.assets.secure_transport,
+        )
+    } else {
+        let content = date_of_birth_form(&form.day, &form.month, &form.year, &errors, to_check);
+        page_question(
+            &state,
+            &sid,
+            &data,
+            "What is your date of birth?",
+            if to_check {
+                "/date-of-birth?return=check-answers"
+            } else {
+                "/date-of-birth"
+            },
+            back_for(StepId::DateOfBirth, to_check),
+            content,
+        )
+    }
+}
+
+fn date_of_birth_form(
+    day: &str,
+    month: &str,
+    year: &str,
+    errors: &[FieldError],
+    to_check: bool,
+) -> String {
+    let summary = error_summary(errors);
+    let message = field_error(errors, "date-of-birth");
+    let mut date_params = vec![
+        ("id", v_str("date-of-birth")),
+        ("namePrefix", v_str("date-of-birth")),
+        (
+            "fieldset",
+            v_obj(params(&[(
+                "legend",
+                v_obj(params(&[
+                    ("text", v_str("What is your date of birth?")),
+                    ("isPageHeading", Value::Bool(true)),
+                    ("classes", v_str("govuk-fieldset__legend--l")),
+                ])),
+            )])),
+        ),
+        ("hint", v_obj(params(&[("text", v_str("For example, 31 3 1980"))]))),
+        (
+            "items",
+            Value::Array(vec![
+                v_obj(params(&[("name", v_str("day")), ("value", v_str(day))])),
+                v_obj(params(&[("name", v_str("month")), ("value", v_str(month))])),
+                v_obj(params(&[("name", v_str("year")), ("value", v_str(year))])),
+            ]),
+        ),
+    ];
+    if let Some(text) = message {
+        date_params.push(("errorMessage", v_obj(params(&[("text", v_str(text))]))));
+    }
+    let date_input = must_render("date-input", &params(&date_params));
+    let button = must_render("button", &params(&[("text", v_str("Continue"))]));
+    let hidden = return_hidden(to_check);
+    format!(
+        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+        {summary}<form method="post" novalidate>{hidden}{date_input}{button}</form></div></div>"#
+    )
+}
+
+#[derive(Deserialize)]
+pub struct CountryForm {
+    #[serde(default)]
+    country: String,
+    #[serde(rename = "returnTo", default)]
+    return_to: Option<String>,
+}
+
+pub async fn country_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReturnQuery>,
+) -> Response<Body> {
+    let (sid, data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(q.return_to.as_deref());
+    let content = country_form(&data.application.country, &[], to_check);
+    page_question(
+        &state,
+        &sid,
+        &data,
+        "Where will you fish?",
+        if to_check {
+            "/where-you-will-fish?return=check-answers"
+        } else {
+            "/where-you-will-fish"
+        },
+        back_for(StepId::WhereYouWillFish, to_check),
+        content,
+    )
+}
+
+pub async fn country_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Form(form): Form<CountryForm>,
+) -> Response<Body> {
+    let (sid, mut data) = state
+        .sessions
+        .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(form.return_to.as_deref());
+    let errors = service::validate_country(&form.country);
+    if errors.is_empty() {
+        data.application.country = form.country;
+        data.application.mark_completed(StepId::WhereYouWillFish);
+        state.sessions.save(&sid, data);
+        redirect_with_session(
+            next_for(StepId::WhereYouWillFish, to_check),
+            &sid,
+            state.assets.secure_transport,
+        )
+    } else {
+        let content = country_form(&form.country, &errors, to_check);
+        page_question(
+            &state,
+            &sid,
+            &data,
+            "Where will you fish?",
+            if to_check {
+                "/where-you-will-fish?return=check-answers"
+            } else {
+                "/where-you-will-fish"
+            },
+            back_for(StepId::WhereYouWillFish, to_check),
+            content,
+        )
+    }
+}
+
+fn country_form(selected: &str, errors: &[FieldError], to_check: bool) -> String {
+    let summary = error_summary(errors);
+    let message = field_error(errors, "country");
+    let items: Vec<Value> = COUNTRIES
+        .iter()
+        .enumerate()
+        .map(|(index, option)| {
+            let mut fields = vec![
+                ("value", v_str(option.value)),
+                ("text", v_str(option.text)),
+                ("checked", Value::Bool(selected == option.value)),
+            ];
+            if index == 0 {
+                fields.push(("id", v_str("country")));
+            }
+            v_obj(params(&fields))
+        })
+        .collect();
+    let mut radio_params = vec![
+        ("idPrefix", v_str("country")),
+        ("name", v_str("country")),
+        (
+            "fieldset",
+            v_obj(params(&[(
+                "legend",
+                v_obj(params(&[
+                    ("text", v_str("Where will you fish?")),
+                    ("isPageHeading", Value::Bool(true)),
+                    ("classes", v_str("govuk-fieldset__legend--l")),
+                ])),
+            )])),
+        ),
+        (
+            "hint",
+            v_obj(params(&[(
+                "text",
+                v_str("This example is fictional. It does not check a real fishing area."),
+            )])),
+        ),
+        ("items", Value::Array(items)),
+    ];
+    if let Some(text) = message {
+        radio_params.push(("errorMessage", v_obj(params(&[("text", v_str(text))]))));
+    }
+    let radios = must_render("radios", &params(&radio_params));
+    let button = must_render("button", &params(&[("text", v_str("Continue"))]));
+    let hidden = return_hidden(to_check);
+    format!(
+        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
+        {summary}<form method="post" novalidate>{hidden}{radios}{button}</form></div></div>"#
     )
 }
 
 #[derive(Deserialize)]
 pub struct EmailForm {
+    #[serde(default)]
     email: String,
+    #[serde(rename = "returnTo", default)]
+    return_to: Option<String>,
 }
 
-pub async fn email_get(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
+pub async fn email_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReturnQuery>,
+) -> Response<Body> {
     let (sid, data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
-    let content = email_form(&data.application.email, &[]);
+    let to_check = return_to_check(q.return_to.as_deref());
+    let content = email_form(&data.application.email, &[], to_check);
     page_question(
         &state,
         &sid,
         &data,
         "What is your email address?",
-        "/email",
-        "/date-of-birth",
+        if to_check {
+            "/email?return=check-answers"
+        } else {
+            "/email"
+        },
+        back_for(StepId::Email, to_check),
         content,
     )
 }
@@ -281,220 +651,73 @@ pub async fn email_post(
     let (sid, mut data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
+    let to_check = return_to_check(form.return_to.as_deref());
     let errors = service::validate_email(&form.email);
     if errors.is_empty() {
         data.application.email = service::clean(&form.email);
         data.application.mark_completed(StepId::Email);
         state.sessions.save(&sid, data);
-        redirect_with_session("/contact-preference", &sid, state.assets.secure_transport)
+        redirect_with_session(
+            next_for(StepId::Email, to_check),
+            &sid,
+            state.assets.secure_transport,
+        )
     } else {
-        let content = email_form(&form.email, &errors);
+        let content = email_form(&form.email, &errors, to_check);
         page_question(
             &state,
             &sid,
             &data,
             "What is your email address?",
-            "/email",
-            "/date-of-birth",
+            if to_check {
+                "/email?return=check-answers"
+            } else {
+                "/email"
+            },
+            back_for(StepId::Email, to_check),
             content,
         )
     }
 }
 
-fn email_form(email: &str, errors: &[FieldError]) -> String {
+fn email_form(email: &str, errors: &[FieldError], to_check: bool) -> String {
     let summary = error_summary(errors);
-    let err = field_error(errors, "email");
     let input = must_render(
         "input",
         &params(&[
             ("id", v_str("email")),
             ("name", v_str("email")),
             ("type", v_str("email")),
+            ("autocomplete", v_str("email")),
+            ("spellcheck", v_bool(false)),
+            (
+                "hint",
+                v_obj(params(&[(
+                    "text",
+                    v_str("This example stores the address in your browser session only."),
+                )])),
+            ),
             (
                 "label",
                 v_obj(params(&[
-                    ("text", v_str("Email address")),
+                    ("text", v_str("What is your email address?")),
                     ("classes", v_str("govuk-label--l")),
                     ("isPageHeading", Value::Bool(true)),
                 ])),
             ),
             ("value", v_str(email)),
-            ("errorMessage", error_message_value(err)),
-        ]),
-    );
-    let button = must_render("button", &params(&[("text", v_str("Save and continue"))]));
-    format!(
-        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-        {summary}<form method="post" novalidate>{input}{button}</form></div></div>"#
-    )
-}
-
-#[derive(Deserialize)]
-pub struct PasswordForm {
-    password: String,
-    #[serde(rename = "confirm-password")]
-    confirm: String,
-}
-
-pub async fn password_get(State(state): State<AppState>, headers: HeaderMap) -> Response<Body> {
-    let (sid, data) = state
-        .sessions
-        .get_or_create(session_id_from(&headers).as_deref());
-    let content = password_form(&[]);
-    page_question(
-        &state,
-        &sid,
-        &data,
-        "Create a password",
-        "/create-a-password",
-        "/additional-details",
-        content,
-    )
-}
-
-pub async fn password_post(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Form(form): Form<PasswordForm>,
-) -> Response<Body> {
-    let (sid, mut data) = state
-        .sessions
-        .get_or_create(session_id_from(&headers).as_deref());
-    let errors = service::validate_password(&form.password, &form.confirm);
-    if errors.is_empty() {
-        data.application.password_created = true;
-        data.application.mark_completed(StepId::CreateAPassword);
-        state.sessions.save(&sid, data);
-        redirect_with_session("/check-answers", &sid, state.assets.secure_transport)
-    } else {
-        let content = password_form(&errors);
-        page_question(
-            &state,
-            &sid,
-            &data,
-            "Create a password",
-            "/create-a-password",
-            "/additional-details",
-            content,
-        )
-    }
-}
-
-fn password_form(errors: &[FieldError]) -> String {
-    let summary = error_summary(errors);
-    let input = must_render(
-        "password-input",
-        &params(&[
-            ("id", v_str("password")),
-            ("name", v_str("password")),
-            (
-                "label",
-                v_obj(params(&[
-                    ("text", v_str("Password")),
-                    ("classes", v_str("govuk-label--l")),
-                    ("isPageHeading", Value::Bool(true)),
-                ])),
-            ),
             (
                 "errorMessage",
-                error_message_value(field_error(errors, "password")),
+                error_message_value(field_error(errors, "email")),
             ),
         ]),
     );
-    let confirm = must_render(
-        "password-input",
-        &params(&[
-            ("id", v_str("confirm-password")),
-            ("name", v_str("confirm-password")),
-            (
-                "label",
-                v_obj(params(&[("text", v_str("Confirm password"))])),
-            ),
-            (
-                "errorMessage",
-                error_message_value(field_error(errors, "password-confirm")),
-            ),
-        ]),
-    );
-    let button = must_render("button", &params(&[("text", v_str("Save and continue"))]));
+    let button = must_render("button", &params(&[("text", v_str("Continue"))]));
+    let hidden = return_hidden(to_check);
     format!(
         r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-        {summary}<form method="post" novalidate>{input}{confirm}{button}</form></div></div>"#
+        {summary}<form method="post" novalidate>{hidden}{input}{button}</form></div></div>"#
     )
-}
-
-pub async fn generic_get(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    uri: OriginalUri,
-) -> Response<Body> {
-    let path = uri.path();
-    let (sid, data) = state
-        .sessions
-        .get_or_create(session_id_from(&headers).as_deref());
-    let step = service::step_by_path(path).expect("known step");
-    let back = service::previous_step(step.id)
-        .map(|s| s.path)
-        .unwrap_or("/task-list");
-    let content = format!(
-        r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
-        <h1 class="govuk-heading-l">{}</h1>
-        <p class="govuk-body">This example step records that you continued.</p>
-        <form method="post" novalidate>
-        <input type="hidden" name="continue" value="1">
-        {}
-        </form></div></div>"#,
-        html_escape(step.heading),
-        must_render("button", &params(&[("text", v_str("Save and continue"))]))
-    );
-    page_question(&state, &sid, &data, step.heading, path, back, content)
-}
-
-pub async fn generic_post(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    uri: OriginalUri,
-) -> Response<Body> {
-    let path = uri.path().to_string();
-    let (sid, mut data) = state
-        .sessions
-        .get_or_create(session_id_from(&headers).as_deref());
-    let step = service::step_by_path(&path).expect("known step");
-    data.application.mark_completed(step.id);
-    match step.id {
-        StepId::DateOfBirth => {
-            data.application.day = "1".into();
-            data.application.month = "1".into();
-            data.application.year = "1990".into();
-        }
-        StepId::ContactPreference => data.application.contact_by = service::CONTACT_EMAIL.into(),
-        StepId::WhereYouWillFish => {
-            data.application.regions = vec!["north-west".into()];
-        }
-        StepId::LicenceLength => {
-            data.application.licence_length = service::LICENCE_TWELVE_MTH.into();
-        }
-        StepId::StartMonth => {
-            data.application.start_month = service::start_months()
-                .into_iter()
-                .next()
-                .map(|(v, _)| v)
-                .unwrap_or_default();
-        }
-        StepId::Address => {
-            data.application.address_line1 = "1 Example Street".into();
-            data.application.town = "London".into();
-            data.application.postcode = "SW1A 1AA".into();
-        }
-        StepId::Evidence => data.application.evidence_filename = String::new(),
-        StepId::AdditionalDetails => data.application.additional_details = String::new(),
-        _ => {}
-    }
-    state.sessions.save(&sid, data);
-    let next = service::next_step(step.id)
-        .map(|s| s.path)
-        .unwrap_or("/check-answers");
-    redirect_with_session(next, &sid, state.assets.secure_transport)
 }
 
 pub async fn check_answers_get(
@@ -504,35 +727,43 @@ pub async fn check_answers_get(
     let (sid, data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
+    if data.application.submitted {
+        return redirect_with_session("/confirmation", &sid, state.assets.secure_transport);
+    }
+    if !data.application.required_complete() {
+        let dest = service::first_incomplete(&data.application)
+            .map(|s| s.path)
+            .unwrap_or("/licence-length");
+        return redirect_with_session(dest, &sid, state.assets.secure_transport);
+    }
     let app = &data.application;
     let rows = Value::Array(vec![
         summary_row(
-            "Name",
-            &format!("{} {}", app.first_name, app.last_name),
-            "/name",
+            "Licence length",
+            &service::label_for(LICENCE_LENGTHS, &app.licence_length),
+            "/licence-length",
+            "licence length",
         ),
+        summary_row("Name", &app.full_name, "/name", "name"),
         summary_row(
             "Date of birth",
-            &format!("{}/{}/{}", app.day, app.month, app.year),
+            &service::format_dob(&app.day, &app.month, &app.year),
             "/date-of-birth",
+            "date of birth",
         ),
-        summary_row("Email", &app.email, "/email"),
-        summary_row("Contact preference", &app.contact_by, "/contact-preference"),
         summary_row(
             "Where you will fish",
-            &app.regions.join(", "),
+            &app.country,
             "/where-you-will-fish",
+            "where you will fish",
         ),
-        summary_row("Licence length", &app.licence_length, "/licence-length"),
-        summary_row("Start month", &app.start_month, "/start-month"),
-        summary_row(
-            "Address",
-            &format!("{}, {}, {}", app.address_line1, app.town, app.postcode),
-            "/address",
-        ),
+        summary_row("Email address", &app.email, "/email", "email address"),
     ]);
     let list = must_render("summary-list", &params(&[("rows", rows)]));
-    let button = must_render("button", &params(&[("text", v_str("Accept and send"))]));
+    let button = must_render(
+        "button",
+        &params(&[("text", v_str("Accept and continue"))]),
+    );
     let content = format!(
         r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
         <h1 class="govuk-heading-l">Check your answers</h1>
@@ -543,7 +774,7 @@ pub async fn check_answers_get(
     let html = render_page(Page {
         title: "Check your answers",
         content,
-        back_href: Some("/create-a-password"),
+        back_href: Some("/email"),
         breadcrumbs: false,
         sensitive: true,
         welsh: false,
@@ -562,11 +793,17 @@ pub async fn check_answers_post(
     let (sid, mut data) = state
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
+    if data.application.submitted {
+        return redirect_with_session("/confirmation", &sid, state.assets.secure_transport);
+    }
     if !data.application.required_complete() {
-        return redirect_with_session("/task-list", &sid, state.assets.secure_transport);
+        let dest = service::first_incomplete(&data.application)
+            .map(|s| s.path)
+            .unwrap_or("/licence-length");
+        return redirect_with_session(dest, &sid, state.assets.secure_transport);
     }
     data.application.submitted = true;
-    data.application.reference = format!("HDJ{}", Uuid::new_v4().to_string()[..8].to_uppercase());
+    data.application.reference = reference_for(&sid);
     state.sessions.save(&sid, data);
     redirect_with_session("/confirmation", &sid, state.assets.secure_transport)
 }
@@ -576,7 +813,10 @@ pub async fn confirmation(State(state): State<AppState>, headers: HeaderMap) -> 
         .sessions
         .get_or_create(session_id_from(&headers).as_deref());
     if !data.application.submitted {
-        return redirect_with_session("/task-list", &sid, state.assets.secure_transport);
+        let dest = service::first_incomplete(&data.application)
+            .map(|s| s.path)
+            .unwrap_or("/licence-length");
+        return redirect_with_session(dest, &sid, state.assets.secure_transport);
     }
     let panel = must_render(
         "panel",
@@ -585,7 +825,7 @@ pub async fn confirmation(State(state): State<AppState>, headers: HeaderMap) -> 
             (
                 "html",
                 v_str(format!(
-                    "Your reference number<br><strong>{}</strong>",
+                    "Your example reference number<br><strong>{}</strong>",
                     html_escape(&data.application.reference)
                 )),
             ),
@@ -594,7 +834,8 @@ pub async fn confirmation(State(state): State<AppState>, headers: HeaderMap) -> 
     let content = format!(
         r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
         {panel}
-        <p class="govuk-body"><a class="govuk-link" href="/new-application">Start a new application</a></p>
+        <p class="govuk-body">This is a fictional example. Nobody will send you a fishing rod licence.</p>
+        <p class="govuk-body"><a class="govuk-link" href="/components">Back to the component list</a></p>
         </div></div>"#
     );
     let html = render_page(Page {
@@ -604,7 +845,7 @@ pub async fn confirmation(State(state): State<AppState>, headers: HeaderMap) -> 
         breadcrumbs: false,
         sensitive: true,
         welsh: false,
-        show_feedback: true,
+        show_feedback: false,
         assets: &state.assets,
         session: &data,
         return_path: "/confirmation",
@@ -612,18 +853,23 @@ pub async fn confirmation(State(state): State<AppState>, headers: HeaderMap) -> 
     html_response(&state, html, &sid, true)
 }
 
-fn summary_row(key: &str, value: &str, href: &str) -> Value {
+fn summary_row(key: &str, value: &str, href: &str, hidden: &str) -> Value {
+    let display = if value.trim().is_empty() {
+        "Not provided"
+    } else {
+        value
+    };
     v_obj(params(&[
         ("key", v_obj(params(&[("text", v_str(key))]))),
-        ("value", v_obj(params(&[("text", v_str(value))]))),
+        ("value", v_obj(params(&[("text", v_str(display))]))),
         (
             "actions",
             v_obj(params(&[(
                 "items",
                 Value::Array(vec![v_obj(params(&[
-                    ("href", v_str(href)),
+                    ("href", v_str(format!("{href}?return=check-answers"))),
                     ("text", v_str("Change")),
-                    ("visuallyHiddenText", v_str(key)),
+                    ("visuallyHiddenText", v_str(hidden)),
                 ]))]),
             )])),
         ),
