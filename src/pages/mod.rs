@@ -194,10 +194,10 @@ pub fn render_page(page: Page<'_>) -> String {
         footer_link("Accessibility", "/accessibility"),
         footer_link("About this example", "/about"),
     ];
-    // Catalogue / examples links are always listed; demos routes may 404 when demos are off.
-    footer_items.push(footer_link("Component catalogue", "/components"));
-    footer_items.push(footer_link("Example pages", "/examples"));
-
+    if crate::config::demos_enabled() {
+        footer_items.push(footer_link("Component catalogue", "/components"));
+        footer_items.push(footer_link("Example pages", "/examples"));
+    }
     let footer = must_render(
         "footer",
         &params(&[(
