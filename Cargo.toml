@@ -1,0 +1,49 @@
+[package]
+name = "govuk-frontend-example-rust"
+version = "0.1.0"
+edition = "2021"
+description = "Server-rendered GOV.UK Frontend components in Rust (Axum + Askama)"
+license = "MIT"
+default-run = "govuk-frontend-example-rust"
+
+[lib]
+name = "govuk_frontend_example_rust"
+path = "src/lib.rs"
+
+[[bin]]
+name = "govuk-frontend-example-rust"
+path = "src/main.rs"
+
+[dependencies]
+askama = "0.12"
+axum = { version = "0.7", features = ["multipart"] }
+base64 = "0.22"
+brotli = "7"
+bytes = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+cookie = "0.18"
+flate2 = "1"
+form_urlencoded = "1"
+hex = "0.4"
+http = "1"
+mime = "0.3"
+mime_guess = "2"
+multer = "3"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "raw_value"] }
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["v4"] }
+futures-util = "0.3"
+getrandom = "0.2"
+
+[dev-dependencies]
+pretty_assertions = "1"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"

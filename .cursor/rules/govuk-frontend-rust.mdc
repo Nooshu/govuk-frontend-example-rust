@@ -1,0 +1,421 @@
+---
+description: Build a GOV.UK Frontend compatible server-rendered implementation using Rust, Axum, and Askama
+alwaysApply: true
+---
+
+# Project goal
+
+Build a server-rendered UK government service using Rust, Axum, and Askama that produces HTML compatible with GOV.UK Frontend.
+
+The project demonstrates that GOV.UK Frontend is independent of Nunjucks, Node.js, and client-side frontend frameworks.
+
+The authoritative rendering contract is the official GOV.UK Frontend fixture output belonging to the exact version installed by this project.
+
+Target 100% fixture parity for every implemented component.
+
+# Architecture
+
+```text
+GOV.UK Frontend fixture
+        |
+        v
+Serde fixture model
+        |
+        v
+Rust component model
+        |
+        v
+Askama template
+        |
+        v
+Server-rendered HTML
+        |
+        v
+DOM comparison
+        |
+        v
+Expected GOV.UK HTML
+```
+
+# Technology
+
+Use:
+
+- current stable Rust
+- Axum
+- Tokio
+- Askama
+- Serde
+- serde_yaml
+- scraper or html5ever
+- thiserror
+- Cargo
+
+Use:
+
+```bash
+cargo fmt
+cargo clippy
+cargo test
+```
+
+# GOV.UK Frontend
+
+Pin an explicit GOV.UK Frontend version.
+
+Use official GOV.UK Frontend:
+
+- CSS
+- JavaScript
+- fonts
+- images
+- assets
+- fixtures
+- expected HTML
+
+Do not reimplement its CSS or client-side behaviour.
+
+# Component investigation
+
+Before implementing a component:
+
+1. inspect all upstream fixtures
+2. inspect expected HTML
+3. inspect upstream Nunjucks where necessary
+4. understand complete rendering behaviour
+5. design an idiomatic Rust component
+6. implement it
+7. run all applicable fixtures
+
+Nunjucks may be used as reference material only.
+
+# Architecture
+
+Separate:
+
+- Axum HTTP routing
+- application logic
+- fixture models
+- component models
+- component rendering
+- Askama templates
+- fixture loading
+- DOM comparison
+- tests
+
+Suggested structure:
+
+```text
+src/
+  web/
+  govuk/
+    mod.rs
+    button.rs
+    input.rs
+    textarea.rs
+    radios.rs
+    checkboxes.rs
+  fixtures/
+  rendering/
+
+templates/
+  govuk/
+    components/
+      button.html
+      input.html
+      textarea.html
+      radios.html
+      checkboxes.html
+
+tests/
+```
+
+Components must be independently renderable without Axum.
+
+# Component models
+
+Use strongly typed structs.
+
+For example:
+
+```rust
+#[derive(Template)]
+#[template(path = "govuk/components/button.html")]
+pub struct Button<'a> {
+    pub text: &'a str,
+    pub button_type: ButtonType,
+    pub classes: Option<&'a str>,
+}
+```
+
+Use enums for genuinely constrained sets.
+
+Do not create bespoke types for every string merely for theoretical type safety.
+
+Prefer readable APIs over complex type machinery.
+
+Keep fixture deserialisation models separate from component domain models when that distinction improves the design.
+
+# Askama
+
+Use Askama for server-side templates.
+
+Keep templates simple.
+
+Move complicated transformations into Rust.
+
+Do not introduce additional HTML elements for template convenience.
+
+Do not use Nunjucks.
+
+Do not invoke Node.js for production component rendering.
+
+# Escaping and trusted HTML
+
+Rely on Askama's HTML escaping for ordinary values.
+
+GOV.UK `text` options must be escaped.
+
+GOV.UK `html` options require an explicit trusted HTML representation.
+
+Create a small `TrustedHtml` abstraction if appropriate.
+
+Do not globally disable Askama escaping.
+
+Never convert arbitrary user-controlled data into trusted HTML.
+
+Do not use safe/unescaped output merely to make a fixture pass.
+
+# Attributes
+
+Support arbitrary attributes where GOV.UK Frontend defines them.
+
+Render them safely.
+
+Preserve:
+
+- IDs
+- names
+- values
+- classes
+- roles
+- ARIA
+- data attributes
+- boolean attributes
+- form states
+
+Avoid constructing raw attribute strings from untrusted values.
+
+# Fixture loading
+
+Use Serde and serde_yaml.
+
+Fixture parsing should be robust enough to support the complete range of fixture options required by implemented components.
+
+Do not special-case fixture names during deserialisation.
+
+# Fixture tests
+
+For every supported fixture:
+
+1. load upstream fixture YAML
+2. deserialize fixture options
+3. convert them into the local component model
+4. render with Askama
+5. obtain expected GOV.UK HTML
+6. parse actual HTML
+7. parse expected HTML
+8. compare meaningful DOM structure
+9. output a useful diff when they differ
+
+Tests must be data-driven.
+
+New fixtures should normally execute automatically.
+
+# HTML comparison
+
+Use scraper/html5ever or another standards-aware parser.
+
+Do not rely exclusively on raw string comparison.
+
+Normalisation must be conservative.
+
+It may ignore genuinely insignificant serialisation differences.
+
+It must not hide differences involving:
+
+- elements
+- ordering
+- text
+- attributes
+- classes
+- IDs
+- values
+- ARIA
+- data attributes
+- form semantics
+- accessibility relationships
+
+Document every normalisation rule.
+
+Test the comparator independently.
+
+When fixture parity fails, assume rendering is incorrect before modifying the comparator.
+
+# Testing
+
+Use Rust's standard test infrastructure.
+
+Test:
+
+- all supported official fixtures
+- text escaping
+- trusted HTML
+- attributes
+- classes
+- IDs
+- ARIA
+- data attributes
+- errors
+- hints
+- nested components
+- form states
+- complex components
+
+Use integration tests where appropriate.
+
+# Error handling
+
+Use `Result` for fallible operations.
+
+Use `thiserror` for clear error types where useful.
+
+Do not use `unwrap()` or `expect()` in normal production paths unless failure genuinely represents an impossible invariant and the reason is clear.
+
+They are acceptable in tests where appropriate.
+
+Fixture failures should produce useful diagnostic output.
+
+# Forbidden shortcuts
+
+Never:
+
+- modify upstream fixtures
+- modify expected HTML
+- special-case fixture names
+- hard-code expected fixture output
+- copy fixture HTML into templates
+- weaken comparison to hide differences
+- invoke Nunjucks at runtime
+- invoke Node.js for production component rendering
+- call another implementation at runtime
+- use a client-side SPA framework for core component markup
+- recreate GOV.UK Frontend CSS
+- unnecessarily replace GOV.UK Frontend JavaScript
+
+If a fixture cannot yet be supported, leave that limitation visible rather than cheating the test.
+
+# Progressive enhancement
+
+Server-render the complete core experience.
+
+Use official GOV.UK Frontend JavaScript for progressive enhancement.
+
+Do not use JavaScript to construct markup that Askama should have rendered correctly.
+
+# Assets
+
+Use the official GOV.UK Frontend package as the asset source.
+
+Pin its version.
+
+Make asset acquisition reproducible.
+
+Node.js may be used as build tooling where required to obtain/build GOV.UK Frontend assets, but it must not participate in application runtime rendering.
+
+# Dependencies
+
+Use Cargo.
+
+Commit `Cargo.lock` for the application.
+
+Prefer established crates.
+
+Keep dependencies minimal.
+
+Run appropriate security/audit tooling where practical.
+
+# Rust quality
+
+Prefer:
+
+- straightforward ownership
+- borrowing where natural
+- owned values where they simplify APIs
+- small structs
+- enums for meaningful closed sets
+- composition
+- explicit error handling
+- simple Askama templates
+
+Avoid:
+
+- premature lifetime optimisation
+- excessive generics
+- unnecessary macros
+- unsafe code
+- recreating an object-oriented component framework
+- unnecessary JavaScript
+- architecture copied from TypeScript
+
+CI should run:
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all
+```
+
+# CI
+
+CI must:
+
+1. obtain reproducible dependencies
+2. run formatting checks
+3. run Clippy
+4. compile
+5. run tests
+6. run the complete fixture parity suite
+
+Fixture failures fail CI.
+
+# GOV.UK Frontend upgrades
+
+When upgrading:
+
+1. update the pinned GOV.UK Frontend version
+2. obtain that exact version's fixtures
+3. run the existing Rust implementation against them
+4. inspect parity failures
+5. update Rust/Askama rendering where upstream behaviour changed
+6. rerun the complete suite
+
+Never modify new fixtures simply to retain old rendering.
+
+# Definition of done
+
+A component is complete when:
+
+- Rust and Askama server-render it
+- it is independently renderable from Axum
+- Nunjucks is not a runtime dependency
+- Node.js is not a runtime rendering dependency
+- official GOV.UK Frontend assets are used
+- every supported fixture passes
+- escaping and trusted HTML are tested
+- accessibility markup matches expected output
+- the comparator has not been weakened
+- no fixture-specific hacks exist
+- CI passes
+
+Fixture parity, not visual similarity, defines GOV.UK Frontend compatibility.
