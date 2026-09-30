@@ -4,7 +4,7 @@ Use this when the user asks for a Design System **pattern** (under `/patterns/` 
 
 Do **not** create a new low-level component unit or fixture-parity suite for patterns.
 
-**Stack note:** Compose pages using the chosen language’s idiomatic routing and templating ([tech-stack.md](tech-stack.md)).
+**Stack note:** Compose pages using **Axum** routes and **Askama** templates ([tech-stack.md](tech-stack.md)).
 
 ## What patterns are here
 

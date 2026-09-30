@@ -13,17 +13,19 @@ How we keep docs dual-purpose: [documentation-structure.md](documentation-struct
 
 ## For human developers
 
-| Doc                                                      | Purpose                                          |
-| -------------------------------------------------------- | ------------------------------------------------ |
-| [project-purpose.md](project-purpose.md)                 | What this template is for                        |
-| [onboarding.md](onboarding.md)                           | Repo map, run modes, components vs patterns      |
-| [priorities.md](priorities.md)                           | Ordered priorities                               |
-| [frontend-performance.md](frontend-performance.md)       | Caching, compression, asset placement, budgets   |
-| [frontend-security.md](frontend-security.md)             | OWASP response headers, CSP, cookies             |
-| [tech-stack.md](tech-stack.md)                           | Wrapper language (TBD) + Frontend Node/Nunjucks  |
-| [guidance-sources.md](guidance-sources.md)               | Official GDS / Service Manual / Frontend URLs    |
-| [documentation-structure.md](documentation-structure.md) | Dual-audience docs + language practice rules     |
-| [CONTRIBUTING.md](../CONTRIBUTING.md)                    | How to contribute, local checks, PR expectations |
+| Doc                                                      | Purpose                                                   |
+| -------------------------------------------------------- | --------------------------------------------------------- |
+| [project-purpose.md](project-purpose.md)                 | What this template is for                                 |
+| [onboarding.md](onboarding.md)                           | Repo map, run modes, components vs patterns               |
+| [priorities.md](priorities.md)                           | Ordered priorities                                        |
+| [frontend-performance.md](frontend-performance.md)       | Caching, compression, asset placement, budgets            |
+| [frontend-security.md](frontend-security.md)             | OWASP response headers, CSP, cookies                      |
+| [tech-stack.md](tech-stack.md)                           | Rust + Axum + Askama; Frontend Node pin / Sass / fixtures |
+| [example-service.md](example-service.md)                 | Rod fishing licence journey and demo routes               |
+| [deploying-on-render.md](deploying-on-render.md)         | Render.com free-tier deploy                               |
+| [guidance-sources.md](guidance-sources.md)               | Official GDS / Service Manual / Frontend URLs             |
+| [documentation-structure.md](documentation-structure.md) | Dual-audience docs + language practice rules              |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                    | How to contribute, local checks, PR expectations          |
 
 ## For AI agents
 
@@ -42,7 +44,7 @@ Agents should still open human-oriented docs when onboarding a teammate or expla
 | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | [upgrading-govuk-frontend.md](upgrading-govuk-frontend.md) | Update plan — read [latest release](https://github.com/alphagov/govuk-frontend/releases/latest) first |
 | [govuk-frontend-roadmap.md](govuk-frontend-roadmap.md)     | Upstream roadmap; what not to invent                                                                  |
-| [testing-components.md](testing-components.md)             | Fixture parity, 100% coverage, Nunjucks suite, CI                                                     |
+| [testing-components.md](testing-components.md)             | Fixture parity, 100% coverage, CI                                                                     |
 | [govuk-components.md](govuk-components.md)                 | Component architecture                                                                                |
 | [creating-components.md](creating-components.md)           | Ship a new component                                                                                  |
 | [creating-patterns.md](creating-patterns.md)               | Ship a Design System pattern / page                                                                   |

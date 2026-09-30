@@ -1,98 +1,77 @@
 # Tech stack
 
-**Status: TBD** (implementation language)
+**Status: Rust** (implementation language recorded)
 
-The _example implementation_ language and its 2026 best-practice templating / component approach are not chosen yet. This file is the **single place** to record them when decided.
+This example is a **Rust** server-rendered GOV.UK Frontend service. Component and page HTML are produced in Rust (Askama for pages; native Rust renderers that track Frontend macros/`template.njk` for components). There is **no** React/Vue/Angular/Svelte UI layer.
 
 ## Two layers
 
-| Layer                          | Stack                                                                                               | Notes                                                                                                                                      |
-| ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **GOV.UK Frontend (upstream)** | **Node** package (`govuk-frontend`), **Nunjucks** macros (`template.njk`), official `fixtures.json` | Fixed by GDS. Always name Node/Nunjucks when discussing install, fixtures, macro options, escape behaviour, and verifying stored fixtures. |
-| **This template (wrapper)**    | TBD — e.g. TypeScript, Go, Python                                                                   | Server-side HTML tracking Frontend macros/`template.njk` (Nunjucks in-process only when Node-adjacent). **No** React/Vue/Angular/Svelte.   |
+| Layer                          | Stack                                                                                               | Notes                                                                                            |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **GOV.UK Frontend (upstream)** | **Node** package (`govuk-frontend`), **Nunjucks** macros (`template.njk`), official `fixtures.json` | Fixed by GDS. Node is used for install, Sass, fixtures, and shared baseline/docs tests only.     |
+| **This example (wrapper)**     | **Rust** + **Axum** + **Askama** + **Tokio**                                                        | Native component HTML in Rust. **Do not** shell out to Node/Nunjucks for request-time rendering. |
 
-## Rule for agents and humans
+## Runtime and tooling
 
-Until an implementation language is recorded here: do not invent wrapper-specific paths, package managers, or framework idioms.
+| Item                    | Value                                                                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation language | Rust (stable, see `rust-toolchain.toml`)                                                                                                                                           |
+| HTTP                    | Axum on Tokio                                                                                                                                                                      |
+| Page templates          | Askama                                                                                                                                                                             |
+| Component HTML          | Rust renderers tracking Frontend macros; fixture parity is the contract                                                                                                            |
+| Package manager         | Cargo (`Cargo.lock` committed) + npm for `govuk-frontend` / Sass                                                                                                                   |
+| `govuk-frontend` (Node) | `6.5.1` — check [latest release](https://github.com/alphagov/govuk-frontend/releases/latest) before upgrades                                                                       |
+| Sass pipeline           | `styles/application.scss` → `@use` Frontend → `govuk-overrides.scss` last → `npm run build:styles` → `dist/stylesheets/application.css`                                            |
+| Never ship              | Frontend’s prebuilt `govuk-frontend.min.css` as the long-term source                                                                                                               |
+| Escape / attributes     | Nunjucks-compatible escape and `govukAttributes` behaviour in `src/govuk/`                                                                                                         |
+| Fixture loader          | `node_modules/govuk-frontend/dist/govuk/components/*/fixtures.json` via Serde + ordered Params                                                                                     |
+| Parity gate             | Rust output (outer-trim only) ≡ every fixture `html` (including hidden)                                                                                                            |
+| Coverage                | Node baseline+Sass gated at **100%** in `npm test`. Rust: full fixture parity suite + `cargo llvm-cov` (exclude `main.rs`). Expand HTTP/domain tests toward 100% library coverage. |
+| Deploy                  | Render.com free tier — native Rust runtime, `render.yaml`, `scripts/render-build.sh`                                                                                               |
 
-Once recorded: **every** feature request and code change must follow **that language’s latest best practices** for project layout, typing, modules, testing, packaging, and CI — while honouring Frontend’s fixture contract in [`AGENTS.md`](../AGENTS.md). Prefer current stable idioms for the recorded major version over outdated tutorials.
-
-**HTML generation follows the wrapper language:**
-
-- **Node-adjacent stacks** (TypeScript on Node): calling Frontend’s **Nunjucks macros** in-process is fine — that is why the TypeScript line does it.
-- **Other languages** (Go, Python, …): generate component and page HTML **natively** in that language. Do **not** shell out to Node/Nunjucks for request-time rendering. Use the pinned package’s `template.njk` / macros as the behaviour reference, and prove **backend ≡ every fixture `html`**. Optional Node Nunjucks checks only prove fixtures are fresh.
-
-Still do **not** maintain hand-copied HTML dumps from each release as the long-term source.
-
-Shared Node tooling in this repo (Sass pipeline, `baseline/`, docs scripts) already uses current ESM / Node 22+ practice; keep it that way.
-
-Document stack decisions and “how we write X here” notes in this file when the language is chosen, so humans and agents share one source of truth.
-
-## Consistency tooling (today)
-
-While the wrapper language is TBD, Node tooling keeps docs and shared config consistent:
+### Coverage commands
 
 ```sh
-npm install
-npm test          # baseline/ headers and cache policy; Sass pipeline
-npm run build:styles
-npm run verify    # docs + build:styles + tests
+# Node baseline + Sass (already gated in npm test)
+npm run test:baseline
+npm run test:styles
+
+# Rust (install once: cargo install cargo-llvm-cov)
+cargo llvm-cov --all --ignore-filename-regex='main\.rs'
 ```
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). Dotfiles: `.editorconfig`, `.prettierrc.json`, `.markdownlint-cli2.jsonc`, `.nvmrc`, `.vscode/`, `.cursor/rules/`, `.github/`. Record language-specific formatters in this file when chosen.
+Integration tests in `tests/` exercise HTTP routes and are included in `cargo test --all`.
 
-## Shared baseline (language-agnostic)
+## Commands
 
-[`baseline/`](../baseline/) is part of this template’s contract. Language lines sync that directory with this repo.
+```sh
+npm ci
+npm run build:styles
+cargo fmt
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all
+npm run verify          # docs + Sass + Node baseline tests
+npm start               # build styles then run the Rust server
+```
 
-| Piece                                             | Role                                                                                               |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| [`baseline/policy.json`](../baseline/policy.json) | OWASP header values, CSP directives, cache kinds, performance budgets                              |
-| [`baseline/index.mjs`](../baseline/index.mjs)     | Node helpers: `buildResponseHeaders`, `applyResponseHeaders`, `buildSetCookie`, preload and `ETag` |
-| [`styles/`](../styles/)                           | Sass entry compiling Frontend via `@use`, then `govuk-overrides.scss` ([styles.md](styles.md))     |
+Render build: `./scripts/render-build.sh` → `./target/release/govuk-frontend-example-rust`.
 
-Node and TypeScript services call the helpers. Other languages implement the same `kind` values and header map, and test against the Node output. Production HTTPS passes `secureTransport: true`. Details: [frontend-performance.md](frontend-performance.md), [frontend-security.md](frontend-security.md).
+## Shared baseline
 
-Expect a **Node** dependency for installing `govuk-frontend`, compiling Sass, running shared baseline/docs tests, and (optionally) a Nunjucks freshness check — even when the wrapper is another language. That does **not** mean the Go/Python/… server should call Node to render HTML.
+[`baseline/policy.json`](../baseline/policy.json) defines OWASP headers, CSP (including the `js-enabled` snippet hash), and cache kinds. The Rust HTTP layer applies the same kinds; production HTTPS uses `secureTransport: true`. Compress with Brotli (`br`); Gzip only when the client does not advertise `br`.
 
-## When implementation language is confirmed, document
+## HTML generation rules
 
-- Language, runtime, and version policy
-- Templating approach: Nunjucks macros when the wrapper is Node-adjacent; otherwise native HTML generation in the wrapper language, with fixture parity documented
-- Package manager, lockfile, and how dependencies are pinned (including `govuk-frontend` via npm/Node)
-- How Frontend CSS/JS (and fonts) are installed and served: Sass compile of `styles/application.scss`, fingerprinted URL, `buildResponseHeaders` as `fingerprinted-asset`
-- How every HTTP response applies [`baseline/`](../baseline/) (`secureTransport: true` in production)
-- Shared HTML escape + attribute helpers matching **Nunjucks `escape`** when not invoking Nunjucks directly (see [creating-components.md](creating-components.md))
-- Fixture loader and preview / raw-fixture route conventions (extensive parity coverage)
-- Layout chrome helpers (skip link, header, service navigation, footer)
-- Test runner commands, **backend parity suite** over **all** fixtures (primary), **100%** coverage gate (functions / branches / statements), and **Nunjucks fixture-verification** scripts (Node, secondary)
-- Upgrade entrypoint — always review https://github.com/alphagov/govuk-frontend/releases/latest first; see [upgrading-govuk-frontend.md](upgrading-govuk-frontend.md)
-- Confirmation that no frontend UI framework is in the dependency tree for rendering
+- Prefer GOV.UK `text` options (escaped). Use trusted HTML only for controlled `html` options (`Safe`).
+- Component options mirror Nunjucks macro options / fixture `options`.
+- Patterns compose components; they have no fixture-parity suites.
+- No `!important` in service CSS ([styles.md](styles.md)).
 
-## Hard constraints (always)
+## Hard constraints
 
-- GOV.UK Frontend pins a single version; CSS/JS and fixtures must match.
-- Prefer **Nunjucks macros** for component HTML; do not maintain copy-pasted HTML from each release.
-- Component options mirror Nunjucks macro options (`macro-options.json` / fixture `options`).
-- Backend output must pass extensive **100% HTML fixture parity** (byte-for-byte vs official fixture `html` for every fixture). Nunjucks-vs-fixture checks prove freshness only; they do not replace backend parity.
-- Compile CSS via Sass ([styles.md](styles.md)); `govuk-overrides.scss` last; never `!important` in service CSS.
-- Patterns compose components; they are not new low-level components.
-- Wrapper structure/tooling follow the **chosen language’s best practices**; Frontend tooling stays Node/Nunjucks.
-- No frontend UI frameworks for GOV.UK chrome — see [project-purpose.md](project-purpose.md).
-- Coverage: **100%** functions, branches, statements — see [testing-components.md](testing-components.md).
-- Before every Frontend upgrade: https://github.com/alphagov/govuk-frontend/releases/latest
+- One pinned `govuk-frontend` version; CSS, JS, and fixtures stay in lockstep.
+- Rust ≡ every official fixture `html`; never edit fixture HTML to pass tests.
+- Node is build/tooling only — not request-time HTML rendering.
+- No frontend UI frameworks for GOV.UK chrome.
 
-See [`AGENTS.md`](../AGENTS.md), [guidance-sources.md](guidance-sources.md), and [creating-components.md](creating-components.md).
-
-## Placeholder version pin
-
-| Item                              | Value                                                                                                        |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Implementation language           | _TBD_                                                                                                        |
-| Templating / component approach   | _TBD — Nunjucks when Node-adjacent; native HTML elsewhere; always fixture-parity_                            |
-| `govuk-frontend` (Node)           | `6.5.1` — check [latest release](https://github.com/alphagov/govuk-frontend/releases/latest) before upgrades |
-| Sass pipeline                     | `styles/application.scss` → `npm run build:styles` → `dist/stylesheets/application.css`                      |
-| Nunjucks fixture verification     | _TBD — Node scripts under tests/_                                                                            |
-| Page template reference           | https://design-system.service.gov.uk/styles/page-template/                                                   |
-| Fixture testing guide             | https://frontend.design-system.service.gov.uk/testing-your-html/                                             |
-| Upgrade / test / preview commands | _TBD — list here when wired_                                                                                 |
+See [`AGENTS.md`](../AGENTS.md), [testing-components.md](testing-components.md), [creating-components.md](creating-components.md), [example-service.md](example-service.md), [deploying-on-render.md](deploying-on-render.md).
