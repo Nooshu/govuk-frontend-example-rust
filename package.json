@@ -1,8 +1,8 @@
 {
-  "name": "govuk-frontend-example",
+  "name": "govuk-frontend-example-rust",
   "version": "0.0.0",
   "private": true,
-  "description": "Base template for GDS-compliant frontends using GOV.UK Frontend (wrapper language TBD). Shared Sass pipeline, performance/security baseline, and Node tooling for docs hygiene.",
+  "description": "Rust + Axum + Askama GOV.UK Frontend example. Server-rendered HTML from Rust; Node only for govuk-frontend pin, Sass, and shared baseline tests.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -12,8 +12,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:md": "markdownlint-cli2",
-    "test": "node --test --experimental-test-coverage --test-coverage-include='baseline/**/*.mjs' --test-coverage-include='scripts/build-styles.mjs' --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100",
     "verify:docs": "npm run format:check && npm run lint:md",
+    "start": "bash scripts/start.sh",
+    "start:release": "bash scripts/start.sh --release",
+    "test:baseline": "node --test --experimental-test-coverage --test-coverage-include='baseline/**/*.mjs' --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 tests/baseline.test.mjs",
+    "test:styles": "node --test --experimental-test-coverage --test-coverage-include='scripts/build-styles.mjs' --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 tests/styles.test.mjs",
+    "test:rust": "cargo fmt --check && cargo clippy --all-targets --all-features -- -D warnings && cargo test --all",
+    "test": "npm run test:baseline && npm run test:styles && npm run build:styles && npm run test:rust",
     "verify": "npm run verify:docs && npm run build:styles && npm test"
   },
   "dependencies": {
