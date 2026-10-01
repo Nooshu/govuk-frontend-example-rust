@@ -17,7 +17,7 @@ path = "src/main.rs"
 [dependencies]
 askama = "0.12"
 axum = { version = "0.7", features = ["multipart"] }
-base64 = "0.22"
+base64 = "0.23"
 brotli = "7"
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
