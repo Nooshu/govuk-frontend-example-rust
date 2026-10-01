@@ -18,7 +18,7 @@ path = "src/main.rs"
 askama = "0.12"
 axum = { version = "0.7", features = ["multipart"] }
 base64 = "0.22"
-brotli = "7"
+brotli = "9"
 bytes = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 cookie = "0.18"
