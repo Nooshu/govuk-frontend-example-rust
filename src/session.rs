@@ -1,7 +1,7 @@
 //! In-memory session store for the example service.
 
 use crate::service::Application;
-use getrandom::getrandom;
+use getrandom::fill;
 use hex::encode as hex_encode;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -70,7 +70,7 @@ pub fn reference_for(session_id: &str) -> String {
 
 fn random_hex(size: usize) -> String {
     let mut bytes = vec![0u8; size];
-    let _ = getrandom(&mut bytes);
+    let _ = fill(&mut bytes);
     hex_encode(bytes)
 }
 
