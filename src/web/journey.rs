@@ -25,9 +25,7 @@ fn back_for(step: StepId, to_check: bool) -> &'static str {
     if to_check {
         "/check-answers"
     } else {
-        service::previous_step(step)
-            .map(|s| s.path)
-            .unwrap_or("/")
+        service::previous_step(step).map(|s| s.path).unwrap_or("/")
     }
 }
 
@@ -465,7 +463,10 @@ fn date_of_birth_form(
                 ])),
             )])),
         ),
-        ("hint", v_obj(params(&[("text", v_str("For example, 31 3 1980"))]))),
+        (
+            "hint",
+            v_obj(params(&[("text", v_str("For example, 31 3 1980"))])),
+        ),
         (
             "items",
             Value::Array(vec![
@@ -760,10 +761,7 @@ pub async fn check_answers_get(
         summary_row("Email address", &app.email, "/email", "email address"),
     ]);
     let list = must_render("summary-list", &params(&[("rows", rows)]));
-    let button = must_render(
-        "button",
-        &params(&[("text", v_str("Accept and continue"))]),
-    );
+    let button = must_render("button", &params(&[("text", v_str("Accept and continue"))]));
     let content = format!(
         r#"<div class="govuk-grid-row"><div class="govuk-grid-column-two-thirds">
         <h1 class="govuk-heading-l">Check your answers</h1>

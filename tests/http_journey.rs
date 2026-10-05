@@ -164,8 +164,14 @@ async fn full_licence_journey() {
     assert_eq!(status, 303);
     assert_eq!(location.as_deref(), Some("/where-you-will-fish"));
 
-    let (status, body, _, _) =
-        request(state.clone(), "GET", "/where-you-will-fish", Some(&sid), None).await;
+    let (status, body, _, _) = request(
+        state.clone(),
+        "GET",
+        "/where-you-will-fish",
+        Some(&sid),
+        None,
+    )
+    .await;
     assert_eq!(status, 200);
     assert!(body.contains("England"));
     assert!(body.contains("This example is fictional"));
@@ -204,8 +210,14 @@ async fn full_licence_journey() {
     assert!(body.contains("10 12 1815"));
     assert!(body.contains("Accept and continue"));
 
-    let (status, _, _, location) =
-        request(state.clone(), "POST", "/check-answers", Some(&sid), Some("")).await;
+    let (status, _, _, location) = request(
+        state.clone(),
+        "POST",
+        "/check-answers",
+        Some(&sid),
+        Some(""),
+    )
+    .await;
     assert_eq!(status, 303);
     assert_eq!(location.as_deref(), Some("/confirmation"));
 
@@ -267,7 +279,8 @@ async fn cookie_choices_post() {
         .and_then(|s| s.split('"').next())
         .expect("csrf");
     let form = format!("csrf={csrf}&returnPath=%2F&cookies=accept");
-    let (status, _, _, _) = request(state, "POST", "/cookie-choices", Some(&sid), Some(&form)).await;
+    let (status, _, _, _) =
+        request(state, "POST", "/cookie-choices", Some(&sid), Some(&form)).await;
     assert_eq!(status, 303);
 }
 
