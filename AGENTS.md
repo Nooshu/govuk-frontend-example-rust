@@ -2,7 +2,7 @@
   GOV.UK Design System — Agent instructions
   ============================================================
   Base template: GDS-compliant frontends (backend + GOV.UK Frontend)
-  Detail lives in /docs and .cursor/skills/gds-compliant-frontend
+  Detail lives in /docs and .cursor/skills/ (gds-compliant-frontend, safe-dependency-updates)
   ============================================================ -->
 
 ♛ GOV.UK
@@ -15,7 +15,7 @@ All component HTML is produced by **native Rust renderers** that track **GOV.UK 
 
 **LIVE guidance** — [Design System feedback](https://design-system.service.gov.uk/community/feedback/).
 
-Skill: [`.cursor/skills/gds-compliant-frontend/SKILL.md`](.cursor/skills/gds-compliant-frontend/SKILL.md). Rust architecture: [`.cursor/rules/govuk-frontend-rust.mdc`](.cursor/rules/govuk-frontend-rust.mdc). Purpose: [`docs/project-purpose.md`](docs/project-purpose.md).
+Skills: [`.cursor/skills/gds-compliant-frontend/SKILL.md`](.cursor/skills/gds-compliant-frontend/SKILL.md), [`.cursor/skills/safe-dependency-updates/SKILL.md`](.cursor/skills/safe-dependency-updates/SKILL.md). Rust architecture: [`.cursor/rules/govuk-frontend-rust.mdc`](.cursor/rules/govuk-frontend-rust.mdc). Purpose: [`docs/project-purpose.md`](docs/project-purpose.md).
 
 ## Priorities (in order)
 
@@ -29,14 +29,14 @@ Details: [`docs/priorities.md`](docs/priorities.md).
 
 ## Start here
 
-| Audience                  | Doc                                                                                                                     |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Human developers**      | [`docs/onboarding.md`](docs/onboarding.md), [`CONTRIBUTING.md`](CONTRIBUTING.md)                                        |
-| **AI agents (this file)** | Keep reading; skill: [`.cursor/skills/gds-compliant-frontend/SKILL.md`](.cursor/skills/gds-compliant-frontend/SKILL.md) |
-| Dual-audience docs map    | [`docs/documentation-structure.md`](docs/documentation-structure.md), [`docs/README.md`](docs/README.md)                |
-| Project purpose           | [`docs/project-purpose.md`](docs/project-purpose.md)                                                                    |
-| Official guidance URLs    | [`docs/guidance-sources.md`](docs/guidance-sources.md)                                                                  |
-| Stack / language          | [`docs/tech-stack.md`](docs/tech-stack.md)                                                                              |
+| Audience                  | Doc                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Human developers**      | [`docs/onboarding.md`](docs/onboarding.md), [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                                                           |
+| **AI agents (this file)** | Keep reading; skills: [gds-compliant-frontend](.cursor/skills/gds-compliant-frontend/SKILL.md), [safe-dependency-updates](.cursor/skills/safe-dependency-updates/SKILL.md) |
+| Dual-audience docs map    | [`docs/documentation-structure.md`](docs/documentation-structure.md), [`docs/README.md`](docs/README.md)                                                                   |
+| Project purpose           | [`docs/project-purpose.md`](docs/project-purpose.md)                                                                                                                       |
+| Official guidance URLs    | [`docs/guidance-sources.md`](docs/guidance-sources.md)                                                                                                                     |
+| Stack / language          | [`docs/tech-stack.md`](docs/tech-stack.md)                                                                                                                                 |
 
 **Language rule:** This example is **Rust**. Every feature and code change must follow current Rust best practices (project layout, typing, modules, tests, packaging, CI, Clippy) — without weakening the non-negotiables below. Record stack-specific conventions in [`docs/tech-stack.md`](docs/tech-stack.md).
 
@@ -61,7 +61,7 @@ Details: [`docs/priorities.md`](docs/priorities.md).
 9. **Progressive enhancement** — core tasks work without Frontend JS; keep `js-enabled` / `govuk-frontend-supported` and `initAll()`.
 10. **Do not ship unreleased GOV.UK chrome** — wait for Frontend release + fixtures. See [`docs/govuk-frontend-roadmap.md`](docs/govuk-frontend-roadmap.md).
 11. **100% code coverage** — functions, branches, and statements at **100%** for application/library code under test; CI must fail below that. Do not weaken fixture HTML equality to chase coverage. See [`docs/testing-components.md`](docs/testing-components.md).
-12. **Always review the latest release notes** before upgrading — https://github.com/alphagov/govuk-frontend/releases/latest — then follow [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md).
+12. **Dependency and Frontend upgrades need a green pipeline** — follow [`.cursor/skills/safe-dependency-updates/SKILL.md`](.cursor/skills/safe-dependency-updates/SKILL.md). For `govuk-frontend`, also read https://github.com/alphagov/govuk-frontend/releases/latest and [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md).
 13. **Performance and security baseline** — every response uses [`baseline/`](baseline/) (cache kind, OWASP headers, CSP hash for the `js-enabled` snippet). Do not invent a weaker set. See [`docs/frontend-performance.md`](docs/frontend-performance.md) and [`docs/frontend-security.md`](docs/frontend-security.md).
 14. **Split finished work into focused commits** — once a coherent piece of code or docs is complete, create **specific** commits with **comprehensive** messages (why, contract impact, how to verify). Do not leave a large mixed working tree; do not squash unrelated concerns into one commit.
 15. **Document every change for humans and agents** — no feature, prompt-driven change, or behaviour lands without dual-audience docs updated in the right place (`/docs` detail, `AGENTS.md` / skill / rules links when contracts change, onboarding or CONTRIBUTING when workflow changes). See [`docs/documentation-structure.md`](docs/documentation-structure.md).
@@ -71,23 +71,24 @@ Using this repo does **not** make a service assessment-ready. See [`docs/service
 
 ## Agent playbooks
 
-| Task                                | Doc                                                                    |
-| ----------------------------------- | ---------------------------------------------------------------------- |
-| Upgrade GOV.UK Frontend             | [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md) |
-| Add a component                     | [`docs/creating-components.md`](docs/creating-components.md)           |
-| Add a pattern                       | [`docs/creating-patterns.md`](docs/creating-patterns.md)               |
-| Layout / chrome                     | [`docs/layout-chrome.md`](docs/layout-chrome.md)                       |
-| Fixture / parity testing            | [`docs/testing-components.md`](docs/testing-components.md)             |
-| Page shell                          | [`docs/page-shell.md`](docs/page-shell.md)                             |
-| Frontend performance                | [`docs/frontend-performance.md`](docs/frontend-performance.md)         |
-| Frontend security                   | [`docs/frontend-security.md`](docs/frontend-security.md)               |
-| Accessibility                       | [`docs/accessibility.md`](docs/accessibility.md)                       |
-| Content & forms                     | [`docs/content-and-forms.md`](docs/content-and-forms.md)               |
-| Design tokens (colour, type, space) | [`docs/design-tokens.md`](docs/design-tokens.md)                       |
-| Styles / Sass cascade               | [`docs/styles.md`](docs/styles.md)                                     |
-| Dual-audience documentation         | [`docs/documentation-structure.md`](docs/documentation-structure.md)   |
-| Guidance sources                    | [`docs/guidance-sources.md`](docs/guidance-sources.md)                 |
-| Authoritative links                 | [`docs/authoritative-references.md`](docs/authoritative-references.md) |
+| Task                                | Doc                                                                                                                          |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Upgrade GOV.UK Frontend             | [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md)                                                       |
+| Safe dependency updates             | [`.cursor/skills/safe-dependency-updates/SKILL.md`](.cursor/skills/safe-dependency-updates/SKILL.md) — **green CI required** |
+| Add a component                     | [`docs/creating-components.md`](docs/creating-components.md)                                                                 |
+| Add a pattern                       | [`docs/creating-patterns.md`](docs/creating-patterns.md)                                                                     |
+| Layout / chrome                     | [`docs/layout-chrome.md`](docs/layout-chrome.md)                                                                             |
+| Fixture / parity testing            | [`docs/testing-components.md`](docs/testing-components.md)                                                                   |
+| Page shell                          | [`docs/page-shell.md`](docs/page-shell.md)                                                                                   |
+| Frontend performance                | [`docs/frontend-performance.md`](docs/frontend-performance.md)                                                               |
+| Frontend security                   | [`docs/frontend-security.md`](docs/frontend-security.md)                                                                     |
+| Accessibility                       | [`docs/accessibility.md`](docs/accessibility.md)                                                                             |
+| Content & forms                     | [`docs/content-and-forms.md`](docs/content-and-forms.md)                                                                     |
+| Design tokens (colour, type, space) | [`docs/design-tokens.md`](docs/design-tokens.md)                                                                             |
+| Styles / Sass cascade               | [`docs/styles.md`](docs/styles.md)                                                                                           |
+| Dual-audience documentation         | [`docs/documentation-structure.md`](docs/documentation-structure.md)                                                         |
+| Guidance sources                    | [`docs/guidance-sources.md`](docs/guidance-sources.md)                                                                       |
+| Authoritative links                 | [`docs/authoritative-references.md`](docs/authoritative-references.md)                                                       |
 
 ## Quick page review
 
@@ -111,8 +112,4 @@ Before finishing a page change:
 
 ## Watching upstream
 
-**Before every Frontend upgrade:** read https://github.com/alphagov/govuk-frontend/releases/latest (currently documents releases such as [v6.5.1](https://github.com/alphagov/govuk-frontend/releases/latest)).
-
-Also: [roadmap](https://design-system.service.gov.uk/community/roadmap/), [upcoming](https://design-system.service.gov.uk/community/upcoming-components-patterns/), [all releases](https://github.com/alphagov/govuk-frontend/releases). Local: [`docs/govuk-frontend-roadmap.md`](docs/govuk-frontend-roadmap.md).
-
-Upgrade only via [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md). Do not invent dark mode, AI patterns, or unofficial chrome.
+Dependency bumps (npm, language packages, Dependabot) and Frontend pin changes: [`.cursor/skills/safe-dependency-updates/SKILL.md`](.cursor/skills/safe-dependency-updates/SKILL.md) (**CI must be green** before start and before complete). `govuk-frontend` still uses [`docs/upgrading-govuk-frontend.md`](docs/upgrading-govuk-frontend.md).
