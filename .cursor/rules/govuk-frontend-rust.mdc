@@ -335,15 +335,7 @@ Node.js may be used as build tooling where required to obtain/build GOV.UK Front
 
 # Dependencies
 
-Use Cargo.
-
-Commit `Cargo.lock` for the application.
-
-Prefer established crates.
-
-Keep dependencies minimal.
-
-Run appropriate security/audit tooling where practical.
+Dependency updates, lockfiles, audits, and Dependabot / Renovate review follow [`.cursor/skills/safe-dependency-updates/SKILL.md`](../skills/safe-dependency-updates/SKILL.md). Keep the dependency surface small; prefer platform / standard-library APIs first. Do **not** start or complete dependency changes while CI is red.
 
 # Rust quality
 
