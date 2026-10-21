@@ -22,7 +22,7 @@
     "verify": "npm run verify:docs && npm run build:styles && npm test"
   },
   "dependencies": {
-    "govuk-frontend": "6.5.1"
+    "govuk-frontend": "6.6.0"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.23.3",
