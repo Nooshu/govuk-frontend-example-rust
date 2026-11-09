@@ -33,7 +33,7 @@ Server-rendered UK government-style service using **Rust**, **Axum**, and **Aska
 
 Component HTML is produced by native Rust renderers that track Frontend macros/`template.njk`. Official `fixtures.json` from the pinned release are the parity contract (**100%** match for every fixture).
 
-Stack details: [`docs/tech-stack.md`](docs/tech-stack.md). Example journey: [`docs/example-service.md`](docs/example-service.md). Deploy: [`docs/deploying-on-render.md`](docs/deploying-on-render.md).
+Stack details: [`docs/tech-stack.md`](docs/tech-stack.md). Example journey: [`docs/example-service.md`](docs/example-service.md). Deploy: [`docs/deploying-on-cloud-run.md`](docs/deploying-on-cloud-run.md).
 
 ## Priorities
 

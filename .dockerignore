@@ -1,0 +1,11 @@
+.git
+.github
+.cursor
+.idea
+.vscode
+node_modules
+target
+dist
+docs
+*.md
+.DS_Store

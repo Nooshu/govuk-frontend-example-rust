@@ -27,7 +27,7 @@ This example is a **Rust** server-rendered GOV.UK Frontend service. Component an
 | Fixture loader          | `node_modules/govuk-frontend/dist/govuk/components/*/fixtures.json` via Serde + ordered Params                                                                                     |
 | Parity gate             | Rust output (outer-trim only) ≡ every fixture `html` (including hidden)                                                                                                            |
 | Coverage                | Node baseline+Sass gated at **100%** in `npm test`. Rust: full fixture parity suite + `cargo llvm-cov` (exclude `main.rs`). Expand HTTP/domain tests toward 100% library coverage. |
-| Deploy                  | Render.com free tier — native Rust runtime, `render.yaml`, `scripts/render-build.sh`                                                                                               |
+| Deploy                  | Google Cloud Run — Docker image (`Dockerfile`, `scripts/deploy-cloud-run.sh`)                                                                                                      |
 
 ### Coverage commands
 
@@ -54,7 +54,7 @@ npm run verify          # docs + Sass + Node baseline tests
 npm start               # build styles then run the Rust server
 ```
 
-Render build: `./scripts/render-build.sh` → `./target/release/govuk-frontend-example-rust`.
+Cloud Run image: `docker build` runs `cargo build --release` and starts `govuk-frontend-example-rust`.
 
 ## Shared baseline
 
@@ -74,4 +74,4 @@ Render build: `./scripts/render-build.sh` → `./target/release/govuk-frontend-e
 - Node is build/tooling only — not request-time HTML rendering.
 - No frontend UI frameworks for GOV.UK chrome.
 
-See [`AGENTS.md`](../AGENTS.md), [testing-components.md](testing-components.md), [creating-components.md](creating-components.md), [example-service.md](example-service.md), [deploying-on-render.md](deploying-on-render.md).
+See [`AGENTS.md`](../AGENTS.md), [testing-components.md](testing-components.md), [creating-components.md](creating-components.md), [example-service.md](example-service.md), [deploying-on-cloud-run.md](deploying-on-cloud-run.md).
